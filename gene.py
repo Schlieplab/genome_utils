@@ -1,13 +1,11 @@
 from typing import List, Optional, TYPE_CHECKING
 from Bio.Seq import Seq
-from .genome import Genome
 from .transcript import Transcript
 
 class Gene:
     """Class representing a gene with transcripts."""
     def __init__(self, gene_id: str, gene_name: str, chromosome: str, 
-                 start: int, end: int, strand: str, biotype: Optional[str] = None,
-                 genome: Optional[Genome] = None) -> None:
+                 start: int, end: int, strand: str, biotype: Optional[str] = None,) -> None:
         self.gene_id: str = gene_id
         self.gene_name: str = gene_name
         self.chromosome: str = chromosome
@@ -16,7 +14,6 @@ class Gene:
         self.strand: str = strand
         self.biotype: Optional[str] = biotype
         self.transcripts: List[Transcript] = []
-        self._genome: Optional[Genome] = genome
     
     def add_transcript(self, transcript: Transcript) -> None:
         """Add a transcript to this gene."""
@@ -40,24 +37,3 @@ class Gene:
         return [t for t in self.transcripts 
                 if t.support_level is not None and t.support_level <= max_level]
     
-    def get_sequence(self) -> Optional[str]:
-        """
-        Get the genomic sequence for this gene from the primary assembly.
-        
-        Returns:
-            Optional[str]: The genomic sequence of the gene, or None if not available
-        """
-        if not self._genome:
-            return None
-            
-        sequence = self._genome.get_sequence_from_primary_assembly(
-            chromosome=self.chromosome,
-            start=self.start,
-            end=self.end
-        )
-        
-        if sequence and self.strand == '-':
-            # Reverse complement for genes on the negative strand
-            sequence = str(Seq(sequence).reverse_complement())
-            
-        return sequence 

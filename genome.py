@@ -2,9 +2,8 @@ from Bio import SeqIO
 import os
 import gzip
 import re
-from typing import Dict, List, Optional, Tuple, Set, Union, Any, Iterator
+from typing import Dict, List, Optional, Union, Any
 import logging
-from dataclasses import dataclass
 
 from .gene import Gene
 from .transcript import Transcript
@@ -122,7 +121,6 @@ class Genome:
                             end=int(end),
                             strand=strand,
                             biotype=biotype,
-                            genome=self  # Pass self as the genome reference
                         )
                         self._genes[gene_id] = gene
                         current_gene = gene
