@@ -1,14 +1,13 @@
 from typing import List, Optional, TYPE_CHECKING
 from Bio.Seq import Seq
-
-if TYPE_CHECKING:
-    from .genome import Genome
+from .genome import Genome
+from .transcript import Transcript
 
 class Gene:
     """Class representing a gene with transcripts."""
     def __init__(self, gene_id: str, gene_name: str, chromosome: str, 
                  start: int, end: int, strand: str, biotype: Optional[str] = None,
-                 genome: Optional['Genome'] = None) -> None:
+                 genome: Optional[Genome] = None) -> None:
         self.gene_id: str = gene_id
         self.gene_name: str = gene_name
         self.chromosome: str = chromosome
@@ -16,10 +15,10 @@ class Gene:
         self.end: int = end      # 1-based genomic coordinates
         self.strand: str = strand
         self.biotype: Optional[str] = biotype
-        self.transcripts: List['Transcript'] = []
-        self._genome: Optional['Genome'] = genome
+        self.transcripts: List[Transcript] = []
+        self._genome: Optional[Genome] = genome
     
-    def add_transcript(self, transcript: 'Transcript') -> None:
+    def add_transcript(self, transcript: Transcript) -> None:
         """Add a transcript to this gene."""
         self.transcripts.append(transcript)
     

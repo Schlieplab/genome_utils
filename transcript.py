@@ -1,9 +1,8 @@
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple
 from Bio.Seq import Seq
 
-if TYPE_CHECKING:
-    from .genome import Genome
-    from .exon import Exon
+
+from .exon import Exon
 
 class Transcript:
     """Class representing a transcript with exons."""
