@@ -1,4 +1,6 @@
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 import os
 import gzip
 import re
@@ -378,3 +380,48 @@ class Genome:
                     return str(record.seq[start_idx:end_idx])
         
         return None  # Chromosome not found 
+
+    def extract_premrna_sequences(self, output_path: str) -> None:
+        """
+        Extract pre-mRNA sequences for each gene from the primary assembly and save them in FASTA format.
+        
+        Args:
+            output_path (str): Path to save the FASTA file containing pre-mRNA sequences
+        """
+        if not self.primary_assembly_path or not os.path.exists(self.primary_assembly_path):
+            raise FileNotFoundError(f"Primary assembly file not found: {self.primary_assembly_path}")
+            
+        if not self._indexed:
+            self.index()
+            
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Create FASTA records for each gene
+        records = []
+        for gene in self.genes:
+            # Get the sequence from the primary assembly
+            sequence = self.get_sequence_from_primary_assembly(
+                chromosome=gene.chromosome,
+                start=gene.start,
+                end=gene.end
+            )
+            
+            if sequence is not None:
+                # If gene is on reverse strand, reverse complement the sequence
+                if gene.strand == '-':
+                    sequence = str(Seq(sequence).reverse_complement())
+                
+                # Create FASTA record
+                record = SeqRecord(
+                    seq=Seq(sequence),
+                    id=f"{gene.gene_id}|{gene.gene_name}",
+                    description=f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
+                )
+                records.append(record)
+        
+        # Write records to FASTA file
+        with open(output_path, 'w') as output_handle:
+            SeqIO.write(records, output_handle, "fasta")
+            
+        logging.info(f"Extracted {len(records)} pre-mRNA sequences to {output_path}") 
