@@ -381,12 +381,14 @@ class Genome:
         
         return None  # Chromosome not found 
 
-    def extract_premrna_sequences(self, output_path: str) -> None:
+    def extract_premrna_sequences(self, output_path: str, force: bool = False) -> None:
         """
         Extract pre-mRNA sequences for each gene from the primary assembly and save them in FASTA format.
+        Uses chunked reading to process one chromosome at a time for memory efficiency.
         
         Args:
             output_path (str): Path to save the FASTA file containing pre-mRNA sequences
+            force (bool): If True, overwrite existing file. If False, skip if file exists.
         """
         if not self.primary_assembly_path or not os.path.exists(self.primary_assembly_path):
             raise FileNotFoundError(f"Primary assembly file not found: {self.primary_assembly_path}")
@@ -394,34 +396,75 @@ class Genome:
         if not self._indexed:
             self.index()
             
+        # Check if file exists and handle accordingly
+        if os.path.exists(output_path):
+            if not force:
+                logging.info(f"Pre-mRNA sequences file already exists at {output_path}. Skipping extraction.")
+                return
+            else:
+                logging.info(f"Overwriting existing pre-mRNA sequences file at {output_path}")
+            
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        # Create FASTA records for each gene
-        records = []
+        # Group genes by chromosome for efficient processing
+        genes_by_chromosome: Dict[str, List[Gene]] = {}
         for gene in self.genes:
-            # Get the sequence from the primary assembly
-            sequence = self.get_sequence_from_primary_assembly(
-                chromosome=gene.chromosome,
-                start=gene.start,
-                end=gene.end
-            )
-            
-            if sequence is not None:
-                # If gene is on reverse strand, reverse complement the sequence
-                if gene.strand == '-':
-                    sequence = str(Seq(sequence).reverse_complement())
-                
-                # Create FASTA record
-                record = SeqRecord(
-                    seq=Seq(sequence),
-                    id=f"{gene.gene_id}|{gene.gene_name}",
-                    description=f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
-                )
-                records.append(record)
+            if gene.chromosome not in genes_by_chromosome:
+                genes_by_chromosome[gene.chromosome] = []
+            genes_by_chromosome[gene.chromosome].append(gene)
         
-        # Write records to FASTA file
-        with open(output_path, 'w') as output_handle:
-            SeqIO.write(records, output_handle, "fasta")
+        # Determine if file is gzipped
+        is_gzipped: bool = self.primary_assembly_path.endswith('.gz')
+        open_func: Any = gzip.open if is_gzipped else open
+        
+        # Process one chromosome at a time
+        records = []
+        with open_func(self.primary_assembly_path, 'rt') as fasta_file:
+            for record in SeqIO.parse(fasta_file, 'fasta'):
+                chromosome = record.id
+                if chromosome not in genes_by_chromosome:
+                    continue
+                
+                # Get all genes for this chromosome
+                chromosome_genes = genes_by_chromosome[chromosome]
+                chromosome_seq = str(record.seq)
+                
+                # Process all genes on this chromosome
+                for gene in chromosome_genes:
+                    # Convert to 0-based indexing for Python string operations
+                    start_idx = gene.start - 1
+                    end_idx = gene.end
+                    
+                    # Check bounds
+                    if start_idx < 0 or end_idx > len(chromosome_seq):
+                        logging.warning(f"Gene {gene.gene_id} coordinates out of bounds for chromosome {chromosome}")
+                        continue
+                    
+                    # Extract sequence
+                    sequence = chromosome_seq[start_idx:end_idx]
+                    
+                    # If gene is on reverse strand, reverse complement the sequence
+                    if gene.strand == '-':
+                        sequence = str(Seq(sequence).reverse_complement())
+                    
+                    # Create FASTA record
+                    record = SeqRecord(
+                        seq=Seq(sequence),
+                        id=f"{gene.gene_id}|{gene.gene_name}",
+                        description=f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
+                    )
+                    records.append(record)
+                
+                # Write records in batches to avoid memory buildup
+                if len(records) >= 1000:
+                    with open(output_path, 'a') as output_handle:
+                        SeqIO.write(records, output_handle, "fasta")
+                    records = []
+        
+        # Write any remaining records
+        if records:
+            with open(output_path, 'a') as output_handle:
+                SeqIO.write(records, output_handle, "fasta")
             
-        logging.info(f"Extracted {len(records)} pre-mRNA sequences to {output_path}") 
+        logging.info(f"Extracted pre-mRNA sequences to {output_path}") 
