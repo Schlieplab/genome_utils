@@ -14,6 +14,7 @@ class Gene:
         self.strand: str = strand
         self.biotype: Optional[str] = biotype
         self.transcripts: List[Transcript] = []
+        self._pre_mrna_sequence: Optional[str] = None
     
     def add_transcript(self, transcript: Transcript) -> None:
         """Add a transcript to this gene."""
@@ -36,4 +37,24 @@ class Gene:
         
         return [t for t in self.transcripts 
                 if t.support_level is not None and t.support_level <= max_level]
+    
+    @property
+    def pre_mrna_sequence(self) -> Optional[str]:
+        """
+        Get the pre-mRNA sequence for this gene.
+        
+        Returns:
+            Optional[str]: The pre-mRNA sequence if available, None otherwise.
+        """
+        return self._pre_mrna_sequence
+    
+    @pre_mrna_sequence.setter
+    def pre_mrna_sequence(self, sequence: str) -> None:
+        """
+        Set the pre-mRNA sequence for this gene.
+        
+        Args:
+            sequence (str): The pre-mRNA sequence to set.
+        """
+        self._pre_mrna_sequence = sequence
     

@@ -381,14 +381,18 @@ class Genome:
         
         return None  # Chromosome not found 
 
-    def extract_premrna_sequences(self, output_path: str, force: bool = False) -> None:
+    def extract_genome_premrna_sequences(self, output_path: str, force: bool = False, 
+                                 exclude_genes: Optional[Union[str, List[str]]] = None) -> None:
         """
         Extract pre-mRNA sequences for each gene from the primary assembly and save them in FASTA format.
         Uses chunked reading to process one chromosome at a time for memory efficiency.
         
         Args:
-            output_path (str): Path to save the FASTA file containing pre-mRNA sequences
+            output_path (str): Path to save the FASTA file containing pre-mRNA sequences.
+                If exclude_genes is provided, the filename will be modified to reflect the exclusions.
             force (bool): If True, overwrite existing file. If False, skip if file exists.
+            exclude_genes (Optional[Union[str, List[str]]]): Gene ID(s) to exclude from extraction.
+                Can be a single gene ID string or a list of gene IDs.
         """
         if not self.primary_assembly_path or not os.path.exists(self.primary_assembly_path):
             raise FileNotFoundError(f"Primary assembly file not found: {self.primary_assembly_path}")
@@ -396,23 +400,55 @@ class Genome:
         if not self._indexed:
             self.index()
             
+        # Process exclude_genes parameter and modify output path accordingly
+        exclude_set = set()
+        modified_output_path = output_path
+        
+        if exclude_genes is not None:
+            if isinstance(exclude_genes, str):
+                exclude_set.add(exclude_genes)
+                # For single gene exclusion, include the gene ID in the filename
+                base_path = output_path.replace('.fa.gz', '')
+                modified_output_path = f"{base_path}.exclude_{exclude_genes}.fa.gz"
+            else:
+                exclude_set.update(exclude_genes)
+                if len(exclude_genes) > 0:
+                    # For multiple exclusions, include the count in the filename
+                    base_path = output_path.replace('.fa.gz', '')
+                    modified_output_path = f"{base_path}.exclude_{len(exclude_genes)}_genes.fa.gz"
+        
+        # If no exclusions, ensure .all. is in the filename
+        if not exclude_set:
+            if '.all.' not in modified_output_path:
+                modified_output_path = modified_output_path.replace('.fa.gz', '.all.fa.gz')
+        
         # Check if file exists and handle accordingly
-        if os.path.exists(output_path):
-            if not force:
-                logging.info(f"Pre-mRNA sequences file already exists at {output_path}. Skipping extraction.")
+        if os.path.exists(modified_output_path):
+            if not force and not (isinstance(exclude_genes, list) and len(exclude_genes) > 1):
+                logging.info(f"Pre-mRNA sequences file already exists at {modified_output_path}. Skipping extraction.")
                 return
             else:
-                logging.info(f"Overwriting existing pre-mRNA sequences file at {output_path}")
+                if isinstance(exclude_genes, list) and len(exclude_genes) > 1:
+                    logging.info(f"Multiple genes excluded - overwriting existing file at {modified_output_path}")
+                else:
+                    logging.info(f"Overwriting existing pre-mRNA sequences file at {modified_output_path}")
             
         # Create output directory if it doesn't exist
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        os.makedirs(os.path.dirname(modified_output_path), exist_ok=True)
         
-        # Group genes by chromosome for efficient processing
+        # Group genes by chromosome for efficient processing, excluding specified genes
         genes_by_chromosome: Dict[str, List[Gene]] = {}
+        excluded_count = 0
         for gene in self.genes:
+            if gene.gene_id in exclude_set:
+                excluded_count += 1
+                continue
             if gene.chromosome not in genes_by_chromosome:
                 genes_by_chromosome[gene.chromosome] = []
             genes_by_chromosome[gene.chromosome].append(gene)
+        
+        if excluded_count > 0:
+            logging.info(f"Excluding {excluded_count} genes from pre-mRNA extraction")
         
         # Determine if file is gzipped
         is_gzipped: bool = self.primary_assembly_path.endswith('.gz')
@@ -458,13 +494,114 @@ class Genome:
                 
                 # Write records in batches to avoid memory buildup
                 if len(records) >= 1000:
-                    with open(output_path, 'a') as output_handle:
+                    with open(modified_output_path, 'a') as output_handle:
                         SeqIO.write(records, output_handle, "fasta")
                     records = []
         
         # Write any remaining records
         if records:
-            with open(output_path, 'a') as output_handle:
+            with open(modified_output_path, 'a') as output_handle:
                 SeqIO.write(records, output_handle, "fasta")
             
-        logging.info(f"Extracted pre-mRNA sequences to {output_path}") 
+        logging.info(f"Extracted pre-mRNA sequences to {modified_output_path}")
+
+    def extract_premrna_sequences_per_gene(self, gene_ids: Union[str, List[str]], 
+                                      output_path: Optional[str] = None) -> Dict[str, str]:
+        """
+        Extract pre-mRNA sequences for specific genes and optionally save them to a FASTA file.
+        
+        Args:
+            gene_ids (Union[str, List[str]]): Gene ID(s) to extract sequences for.
+                Can be a single gene ID string or a list of gene IDs.
+            output_path (Optional[str]): If provided, save the sequences to this FASTA file.
+                If not provided, only return the sequences without saving to file.
+                
+        Returns:
+            Dict[str, str]: Dictionary mapping gene IDs to their sequences.
+        """
+        if not self.primary_assembly_path or not os.path.exists(self.primary_assembly_path):
+            raise FileNotFoundError(f"Primary assembly file not found: {self.primary_assembly_path}")
+            
+        if not self._indexed:
+            self.index()
+            
+        # Convert single gene ID to list
+        if isinstance(gene_ids, str):
+            gene_ids = [gene_ids]
+            
+        # Get genes and group by chromosome
+        genes_by_chromosome: Dict[str, List[Gene]] = {}
+        gene_map: Dict[str, Gene] = {}
+        
+        for gene_id in gene_ids:
+            try:
+                gene = self.gene_by_id(gene_id)
+                if gene.chromosome not in genes_by_chromosome:
+                    genes_by_chromosome[gene.chromosome] = []
+                genes_by_chromosome[gene.chromosome].append(gene)
+                gene_map[gene_id] = gene
+            except ValueError:
+                logging.warning(f"Gene not found: {gene_id}")
+                continue
+        
+        if not genes_by_chromosome:
+            logging.warning("No valid genes found to extract")
+            return {}
+            
+        # Determine if file is gzipped
+        is_gzipped: bool = self.primary_assembly_path.endswith('.gz')
+        open_func: Any = gzip.open if is_gzipped else open
+        
+        # Process one chromosome at a time
+        sequences: Dict[str, str] = {}
+        records = []
+        
+        with open_func(self.primary_assembly_path, 'rt') as fasta_file:
+            for record in SeqIO.parse(fasta_file, 'fasta'):
+                chromosome = record.id
+                if chromosome not in genes_by_chromosome:
+                    continue
+                
+                # Get all genes for this chromosome
+                chromosome_genes = genes_by_chromosome[chromosome]
+                chromosome_seq = str(record.seq)
+                
+                # Process all genes on this chromosome
+                for gene in chromosome_genes:
+                    # Convert to 0-based indexing for Python string operations
+                    start_idx = gene.start - 1
+                    end_idx = gene.end
+                    
+                    # Check bounds
+                    if start_idx < 0 or end_idx > len(chromosome_seq):
+                        logging.warning(f"Gene {gene.gene_id} coordinates out of bounds for chromosome {chromosome}")
+                        continue
+                    
+                    # Extract sequence
+                    sequence = chromosome_seq[start_idx:end_idx]
+                    
+                    # If gene is on reverse strand, reverse complement the sequence
+                    if gene.strand == '-':
+                        sequence = str(Seq(sequence).reverse_complement())
+                    
+                    # Store sequence in gene object and return dictionary
+                    gene.pre_mrna_sequence = sequence
+                    sequences[gene.gene_id] = sequence
+                    
+                    # Create FASTA record if output path is provided
+                    if output_path:
+                        record = SeqRecord(
+                            seq=Seq(sequence),
+                            id=f"{gene.gene_id}|{gene.gene_name}",
+                            description=f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
+                        )
+                        records.append(record)
+        
+        # Write records if output path is provided
+        if output_path and records:
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'w') as output_handle:
+                SeqIO.write(records, output_handle, "fasta")
+            logging.info(f"Extracted sequences for {len(sequences)} genes to {output_path}")
+        
+        return sequences 
