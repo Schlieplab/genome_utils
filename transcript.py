@@ -21,6 +21,11 @@ class Transcript:
         self._sequence: Optional[str] = None
         self._genomic_coordinate_map: Optional[Dict[int, int]] = None
     
+    @property
+    def length(self) -> int:
+        """Get the total length of the transcript (sum of exon lengths)."""
+        return sum(exon.end - exon.start + 1 for exon in self.exons)
+    
     def add_exon(self, exon: 'Exon') -> None:
         """Add an exon to this transcript."""
         self.exons.append(exon)
@@ -28,6 +33,10 @@ class Transcript:
         self.exons.sort(key=lambda e: e.start)
         # Reset the coordinate map since exon structure changed
         self._genomic_coordinate_map = None
+    
+    def __len__(self) -> int:
+        """Return the total length of the transcript."""
+        return self.length
     
     @property
     def sequence(self) -> Optional[str]:
@@ -90,22 +99,7 @@ class Transcript:
                     
         return mapping
     
-    @property
-    def length(self) -> int:
-        """
-        Get the length of the transcript in base pairs.
-        
-        Returns:
-            int: Length of the transcript in base pairs
-        """
-        if not self.exons:
-            return 0
-            
-        total_length = 0
-        for exon in self.exons:
-            total_length += abs(exon.end - exon.start) + 1
-            
-        return total_length
+
     
     def get_exon_by_position(self, position: int) -> Optional['Exon']:
         """

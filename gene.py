@@ -16,19 +16,20 @@ class Gene:
         self.transcripts: List[Transcript] = []
         self._pre_mrna_sequence: Optional[str] = None
     
+    @property
+    def length(self) -> int:
+        """Get the length of the gene based on its genomic coordinates."""
+        return self.end - self.start + 1
+    
+    def __len__(self) -> int:
+        """Return the length of the gene."""
+        return self.length
+    
     def add_transcript(self, transcript: Transcript) -> None:
         """Add a transcript to this gene."""
         self.transcripts.append(transcript)
     
-    @property
-    def length(self) -> int:
-        """
-        Get the length of the gene in base pairs.
-        
-        Returns:
-            int: Length of the gene (end - start + 1)
-        """
-        return abs(self.end - self.start) + 1
+
     
     def get_transcripts_by_support_level(self, max_level: Optional[int] = None) -> List['Transcript']:
         """

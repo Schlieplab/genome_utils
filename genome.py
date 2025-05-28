@@ -106,7 +106,7 @@ class Genome:
                         key, value = attr.split(' ', 1)
                         attr_dict[key] = value.strip('"')
                     except ValueError:
-                        pass
+                        pass # Ignore malformed attributes
                 
                 # Process different feature types
                 if feature_type == 'gene':
