@@ -20,6 +20,16 @@ class Gene:
         """Add a transcript to this gene."""
         self.transcripts.append(transcript)
     
+    @property
+    def length(self) -> int:
+        """
+        Get the length of the gene in base pairs.
+        
+        Returns:
+            int: Length of the gene (end - start + 1)
+        """
+        return abs(self.end - self.start) + 1
+    
     def get_transcripts_by_support_level(self, max_level: Optional[int] = None) -> List['Transcript']:
         """
         Get transcripts filtered by support level.

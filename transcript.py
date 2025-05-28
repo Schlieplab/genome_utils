@@ -90,6 +90,23 @@ class Transcript:
                     
         return mapping
     
+    @property
+    def length(self) -> int:
+        """
+        Get the length of the transcript in base pairs.
+        
+        Returns:
+            int: Length of the transcript in base pairs
+        """
+        if not self.exons:
+            return 0
+            
+        total_length = 0
+        for exon in self.exons:
+            total_length += abs(exon.end - exon.start) + 1
+            
+        return total_length
+    
     def get_exon_by_position(self, position: int) -> Optional['Exon']:
         """
         Get the exon containing a specific position in the transcript.
