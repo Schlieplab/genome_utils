@@ -18,13 +18,13 @@ class Transcript:
         self.biotype: Optional[str] = biotype
         self.support_level: Optional[int] = support_level  # 1-5 or None
         self.exons: List['Exon'] = []
-        self._sequence: Optional[str] = None
+        self._sequence: Optional[str] = ""  # Initialize as empty string
         self._genomic_coordinate_map: Optional[Dict[int, int]] = None
     
     @property
     def length(self) -> int:
         """Get the total length of the transcript (sum of exon lengths)."""
-        return sum(exon.end - exon.start + 1 for exon in self.exons)
+        return len(self._sequence)
     
     def add_exon(self, exon: 'Exon') -> None:
         """Add an exon to this transcript."""
@@ -166,6 +166,7 @@ class Transcript:
         """
         # Build mapping from transcript to genomic coordinates
         mapping = self.genomic_coordinate_map
+        
         if not mapping:
             return [None] * len(positions)
             

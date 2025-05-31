@@ -75,9 +75,7 @@ class Genome:
         is_gzipped: bool = self.gtf_path.endswith('.gz')
         open_func: Any = gzip.open if is_gzipped else open
         
-        # Track current gene and transcript when parsing
-        current_gene: Optional[Gene] = None
-        current_transcript: Optional[Transcript] = None
+
         
         with open_func(self.gtf_path, 'rt') as gtf:
             for line in gtf:
@@ -125,9 +123,8 @@ class Genome:
                             biotype=biotype,
                         )
                         self._genes[gene_id] = gene
-                        current_gene = gene
                 
-                elif feature_type == 'transcript' and current_gene:
+                elif feature_type == 'transcript':
                     transcript_id: Optional[str] = attr_dict.get('transcript_id')
                     gene_id: Optional[str] = attr_dict.get('gene_id')
                     biotype: Optional[str] = attr_dict.get('transcript_biotype', attr_dict.get('biotype', None))
@@ -156,7 +153,7 @@ class Genome:
                             end=int(end),
                             strand=strand,
                             biotype=biotype,
-                            support_level=support_level
+                            support_level=support_level,
                         )
                         self._transcripts[transcript_id] = transcript
                         
@@ -164,9 +161,9 @@ class Genome:
                         if gene_id in self._genes:
                             self._genes[gene_id].add_transcript(transcript)
                         
-                        current_transcript = transcript
                 
-                elif feature_type == 'exon' and current_transcript:
+                elif feature_type == 'exon':
+                    
                     exon_id: str = attr_dict.get('exon_id', f"{seqname}:{start}-{end}")
                     transcript_id: Optional[str] = attr_dict.get('transcript_id')
                     
