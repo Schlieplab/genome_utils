@@ -15,7 +15,9 @@ class Genome:
     def __init__(self, reference_name: str, annotation_version: Optional[str] = None,
                  gtf_path: Optional[str] = None, 
                  transcript_fasta_paths: Optional[Union[str, List[str]]] = None,
-                 primary_assembly_path: Optional[str] = None) -> None:
+                 primary_assembly_path: Optional[str] = None,
+                 tsl_to_keep: Optional[List[Optional[int]]] = None,
+                 protein_coding_only: bool = False) -> None:
         """
         A Genome class using Biopython to load and manipulate genome sequences.
 
@@ -25,12 +27,21 @@ class Genome:
         - gtf_path: Path to the GTF file
         - transcript_fasta_paths: Path(s) to transcript FASTA file(s)
         - primary_assembly_path: Path to the primary assembly FASTA file
+        - tsl_to_keep: Optional list of TSL values to keep (e.g., [1, 2, None]). 
+                       Transcripts not matching these TSLs will be excluded.
+        - protein_coding_only: If True (default), only protein-coding transcripts are loaded.
         """
         
         self.reference_name: str = reference_name
         self.annotation_version: Optional[str] = annotation_version
         self.gtf_path: Optional[str] = gtf_path
         self.primary_assembly_path: Optional[str] = primary_assembly_path
+        self.protein_coding_only: bool = protein_coding_only
+        
+        if tsl_to_keep is not None:
+            self.tsl_to_keep: Optional[set] = set(tsl_to_keep)
+        else:
+            self.tsl_to_keep: Optional[set] = None
         
         # Handle either a single path or a list of paths
         if transcript_fasta_paths is not None:
@@ -112,6 +123,11 @@ class Genome:
                     gene_name: str = attr_dict.get('gene_name', gene_id)
                     biotype: Optional[str] = attr_dict.get('gene_biotype', attr_dict.get('biotype', None))
                     
+                    # If protein_coding_only is True, skip non-protein-coding genes
+                    if self.protein_coding_only and biotype != 'protein_coding':
+                        logging.debug(f"Skipping non-protein-coding gene {gene_id} (biotype: {biotype}) during GTF parsing because protein_coding_only is True.")
+                        continue
+                    
                     if gene_id:
                         gene = Gene(
                             gene_id=gene_id,
@@ -129,6 +145,10 @@ class Genome:
                     gene_id: Optional[str] = attr_dict.get('gene_id')
                     biotype: Optional[str] = attr_dict.get('transcript_biotype', attr_dict.get('biotype', None))
                     
+                    if self.protein_coding_only and biotype != 'protein_coding':
+                        logging.debug(f"Skipping non-protein-coding transcript {transcript_id} (biotype: {biotype}) in gene {gene_id} because protein_coding_only is True.")
+                        continue
+                    
                     # Extract support level - could be 'transcript_support_level' or 'tsl'
                     support_level_str: Optional[str] = attr_dict.get('transcript_support_level', 
                                                                     attr_dict.get('tsl', None))
@@ -143,6 +163,10 @@ class Genome:
                                 support_level = int(match.group(1))
                             except ValueError:
                                 pass  # Keep as None if conversion fails
+                    
+                    if self.tsl_to_keep is not None and support_level not in self.tsl_to_keep:
+                        logging.debug(f"Skipping transcript {transcript_id} in gene {gene_id} due to TSL filtering (TSL: {support_level}, Allowed: {self.tsl_to_keep})")
+                        continue
                     
                     if transcript_id and gene_id:
                         transcript = Transcript(
@@ -225,6 +249,7 @@ class Genome:
         
         raise ValueError(f"Transcript not found with ID: {transcript_id}")
     
+    @property
     def transcripts(self) -> List[Transcript]:
         """Get all transcripts."""
         if not self._indexed:
