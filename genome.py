@@ -379,7 +379,7 @@ class Genome:
         return None  # Chromosome not found 
 
     def extract_genome_premrna_sequences(self, output_path: str, force: bool = False, 
-                                 exclude_genes: Optional[Union[str, List[str]]] = None) -> None:
+                                 exclude_genes: Optional[Union[str, List[str]]] = None) -> str:
         """
         Extract pre-mRNA sequences for each gene from the primary assembly and save them in FASTA format.
         Uses chunked reading to process one chromosome at a time for memory efficiency.
@@ -406,24 +406,24 @@ class Genome:
                 exclude_set.add(exclude_genes)
                 # For single gene exclusion, include the gene ID in the filename
                 base_path = output_path.replace('.fa.gz', '')
-                modified_output_path = f"{base_path}.exclude_{exclude_genes}.fa.gz"
+                modified_output_path = f"{base_path}.exclude_{exclude_genes}.fa"
             else:
                 exclude_set.update(exclude_genes)
                 if len(exclude_genes) > 0:
                     # For multiple exclusions, include the count in the filename
                     base_path = output_path.replace('.fa.gz', '')
-                    modified_output_path = f"{base_path}.exclude_{len(exclude_genes)}_genes.fa.gz"
+                    modified_output_path = f"{base_path}.exclude_{len(exclude_genes)}_genes.fa"
         
         # If no exclusions, ensure .all. is in the filename
         if not exclude_set:
             if '.all.' not in modified_output_path:
-                modified_output_path = modified_output_path.replace('.fa.gz', '.all.fa.gz')
+                modified_output_path = modified_output_path.replace('.fa.gz', '.all.fa')
         
         # Check if file exists and handle accordingly
         if os.path.exists(modified_output_path):
             if not force and not (isinstance(exclude_genes, list) and len(exclude_genes) > 1):
                 logging.info(f"Pre-mRNA sequences file already exists at {modified_output_path}. Skipping extraction.")
-                return
+                return modified_output_path
             else:
                 if isinstance(exclude_genes, list) and len(exclude_genes) > 1:
                     logging.info(f"Multiple genes excluded - overwriting existing file at {modified_output_path}")
@@ -501,6 +501,7 @@ class Genome:
                 SeqIO.write(records, output_handle, "fasta")
             
         logging.info(f"Extracted pre-mRNA sequences to {modified_output_path}")
+        return modified_output_path
 
     def extract_premrna_sequences_per_gene(self, gene_ids: Union[str, List[str]], 
                                       output_path: Optional[str] = None) -> Dict[str, str]:
@@ -587,6 +588,7 @@ class Genome:
                     
                     # Create FASTA record if output path is provided
                     if output_path:
+                        output_path = output_path.replace('.fa.gz', '.fa')
                         record = SeqRecord(
                             seq=Seq(sequence),
                             id=f"{gene.gene_id}|{gene.gene_name}",
