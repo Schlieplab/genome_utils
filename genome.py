@@ -4,9 +4,9 @@ from Bio.SeqRecord import SeqRecord
 import os
 import gzip
 import re
-from typing import Dict, List, Optional, Union, Any, Iterator
+from typing import Dict, List, Optional, Union, Any, Iterator, Tuple
 import logging
-
+from datetime import datetime
 from .gene import Gene
 from .transcript import Transcript
 from .exon import Exon
@@ -233,7 +233,7 @@ class Genome:
                     if transcript_id in self._transcripts:
                         sequence: str = str(record.seq)
                         self._transcripts[transcript_id].sequence = sequence
-    
+
     def gene_by_id(self, gene_id: str) -> Gene:
         """Get a gene by its ID."""
         if not self._indexed:
@@ -303,17 +303,16 @@ class Genome:
         
         return None  # Chromosome not found 
 
-    def yield_premrna_seqrecords(self, exclude_genes: Optional[Union[str, List[str]]] = None) -> Iterator[SeqRecord]:
+    def export_pre_mrna_sequences(self, output_dir: str, exclude_genes: Optional[Union[str, List[str]]] = None, force_overwrite: bool = False) -> Optional[str]:
         """
-        Yields pre-mRNA sequences as SeqRecord objects for each gene from the primary assembly.
-        Sequences are yielded chromosome by chromosome, and genes are sorted by start position.
+        Exports pre-mRNA sequences for genes to a FASTA file, processed chromosome by chromosome.
 
         Parameters:
-            exclude_genes (Optional[Union[str, List[str]]]): Gene ID(s) to exclude.
-                Can be a single gene ID string or a list of gene IDs.
+            output_dir: The directory to save the exported FASTA file.
+            exclude_genes: Optional gene ID(s) to exclude.
 
-        Yields:
-            Iterator[SeqRecord]: An iterator of SeqRecord objects, each representing a pre-mRNA.
+        Returns:
+            Optional[str]: The path to the exported FASTA file, or None if an error occurs or no sequences are written.
         
         Raises:
             FileNotFoundError: If the primary assembly file is not found.
@@ -324,75 +323,164 @@ class Genome:
         if not self._indexed:
             self.index()
 
+        os.makedirs(output_dir, exist_ok=True)
+        e_release_str = self.e_release if self.e_release else "no_release"
+
         exclude_set = set()
+        exclusion_suffix = ""
+        log_message_exclusion_details = " (all genes)"
+
         if exclude_genes:
             if isinstance(exclude_genes, str):
                 exclude_set.add(exclude_genes)
+                exclusion_suffix = f".excluding_{exclude_genes}"
+                log_message_exclusion_details = f" (excluding gene '{exclude_genes}')"
             else:
                 exclude_set.update(exclude_genes)
+                if len(exclude_genes) == 1:
+                    exclusion_suffix = f".excluding_{exclude_genes[0]}"
+                    log_message_exclusion_details = f" (excluding gene '{exclude_genes[0]}')"
+                else:
+                    exclusion_suffix = f".excluding_{len(exclude_genes)}_genes"
+                    log_message_exclusion_details = f" (excluding {len(exclude_genes)} genes)"
+        
+        if self.biotype_to_keep:
+            if len(self.biotype_to_keep) == 1:
+                biotype_suffix = f".{self.biotype_to_keep[0]}"
+            else:
+                biotype_suffix = f".{'_'.join(self.biotype_to_keep)}"
+        else:
+            biotype_suffix = ""
+        
+        if biotype_suffix == "" and exclusion_suffix == "":
+            fasta_filename = f"{self.reference_name}.{e_release_str}.premrna.all.fa"
+        else:
+            fasta_filename = f"{self.reference_name}.{e_release_str}.premrna{biotype_suffix}{exclusion_suffix}.fa"
+        output_fasta_path = os.path.join(output_dir, fasta_filename)
+
+        if os.path.exists(output_fasta_path) and not force_overwrite:
+            if self.verbose:
+                logging.info(f"Output file already exists: {output_fasta_path}. Skipping export.")
+            else:
+                logging.debug(f"Output file already exists: {output_fasta_path}. Skipping export.")
+        elif os.path.exists(output_fasta_path) and force_overwrite:
+            if self.verbose:
+                logging.info(f"Overwriting existing file: {output_fasta_path}")
+            else:
+                logging.debug(f"Overwriting existing file: {output_fasta_path}")
+            os.remove(output_fasta_path)
+        
+        if self.verbose:    
+            logging.info(f"Exporting pre-mRNA sequences to: {output_fasta_path}{log_message_exclusion_details}")
+        else:
+            logging.debug(f"Exporting pre-mRNA sequences to: {output_fasta_path}{log_message_exclusion_details}")
 
         genes_by_chromosome: Dict[str, List[Gene]] = {}
-        processed_gene_ids = set() 
-        all_genes = self.genes 
+        processed_gene_ids = set()
+        all_genes_list = self.genes
         
-        sorted_genes = sorted(all_genes, key=lambda g: (g.chromosome, g.start))
+        # Sort genes first by chromosome, then by start position for ordered processing
+        sorted_genes = sorted(all_genes_list, key=lambda g: (g.chromosome, g.start))
 
         excluded_count = 0
+        genes_to_process_count = 0
         for gene in sorted_genes:
             if gene.gene_id in exclude_set:
                 excluded_count += 1
                 continue
             
-            if gene.gene_id in processed_gene_ids: # Should not happen if self.genes is unique
+            if gene.gene_id in processed_gene_ids:
                 continue
             processed_gene_ids.add(gene.gene_id)
 
             if gene.chromosome not in genes_by_chromosome:
                 genes_by_chromosome[gene.chromosome] = []
-            genes_by_chromosome[gene.chromosome].append(gene) # Already sorted by start due to initial sort
+            genes_by_chromosome[gene.chromosome].append(gene)
+            genes_to_process_count +=1
 
         if excluded_count > 0:
-            logging.info(f"Excluding {excluded_count} genes from pre-mRNA sequence generation.")
+            if self.verbose:
+                logging.info(f"Excluded {excluded_count} genes from pre-mRNA sequence export.")
+            else:
+                logging.debug(f"Excluded {excluded_count} genes from pre-mRNA sequence export.")
 
-        is_gzipped: bool = self.primary_assembly_path.endswith('.gz')
-        open_func: Any = gzip.open if is_gzipped else open
+        if genes_to_process_count == 0:
+            logging.warning(f"No genes found to process for pre-mRNA export after exclusions. Output file '{output_fasta_path}' will be empty.")
+            
 
-        # Process one chromosome at a time
-        with open_func(self.primary_assembly_path, 'rt') as fasta_file:
-            for assembly_record in SeqIO.parse(fasta_file, 'fasta'):
-                chromosome_id = assembly_record.id
-                if chromosome_id not in genes_by_chromosome:
-                    continue
+        is_gzipped_assembly: bool = self.primary_assembly_path.endswith('.gz')
+        open_func_assembly: Any = gzip.open if is_gzipped_assembly else open
+        
+        sequences_written_count = 0
+        records_batch = []
 
-                chromosome_genes_to_process = genes_by_chromosome[chromosome_id]
-                chromosome_seq_str = str(assembly_record.seq)
+        try:
+            with open(output_fasta_path, 'wt') as f_fasta_out:
+                with open_func_assembly(self.primary_assembly_path, 'rt') as fasta_file_handle:
+                    for assembly_record in SeqIO.parse(fasta_file_handle, 'fasta'):
+                        chromosome_id = assembly_record.id
+                        if chromosome_id not in genes_by_chromosome:
+                            continue
 
-                for gene in chromosome_genes_to_process:
-                    # Convert to 0-based indexing for Python string operations
-                    start_idx = gene.start - 1
-                    end_idx = gene.end
+                        chromosome_genes_to_process = genes_by_chromosome[chromosome_id]
+                        chromosome_seq_str = str(assembly_record.seq)
 
-                    if start_idx < 0 or end_idx > len(chromosome_seq_str):
-                        logging.warning(
-                            f"Gene {gene.gene_id} coordinates ({gene.start}-{gene.end}) "
-                            f"out of bounds for chromosome {chromosome_id} (length: {len(chromosome_seq_str)}). Skipping."
-                        )
-                        continue
-                    
-                    sequence_str = chromosome_seq_str[start_idx:end_idx]
+                        for gene in chromosome_genes_to_process: # These are already filtered from exclude_set
+                            start_idx = gene.start - 1 # Convert to 0-based
+                            end_idx = gene.end
 
-                    if gene.strand == '-':
-                        sequence_str = str(Seq(sequence_str).reverse_complement())
-                    
-                    seq_record = SeqRecord(
-                        seq=Seq(sequence_str),
-                        id=f"{gene.gene_id}|{gene.gene_name}",
-                        description=(
-                            f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) "
-                            f"on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
-                        )
-                    )
-                    yield seq_record
+                            if not (0 <= start_idx < len(chromosome_seq_str) and 0 <= end_idx <= len(chromosome_seq_str) and start_idx < end_idx):
+                                logging.warning(
+                                    f"Gene {gene.gene_id} coordinates ({gene.start}-{gene.end}) "
+                                    f"out of bounds for chromosome {chromosome_id} (length: {len(chromosome_seq_str)}). Skipping."
+                                )
+                                continue
+                            
+                            sequence_str = chromosome_seq_str[start_idx:end_idx]
+
+                            if gene.strand == '-':
+                                sequence_str = str(Seq(sequence_str).reverse_complement())
+                            
+                            seq_record = SeqRecord(
+                                seq=Seq(sequence_str),
+                                id=f"{gene.gene_id}|{gene.gene_name}", 
+                                description=f"pre-mRNA sequence for gene {gene.gene_name} ({gene.gene_id}) on {gene.chromosome}:{gene.start}-{gene.end}:{gene.strand}"
+                            )
+                            records_batch.append(seq_record)
+                            sequences_written_count += 1
+                        
+                        if len(records_batch) > 0:
+                            SeqIO.write(records_batch, f_fasta_out, "fasta")
+                            records_batch = [] 
+                
+
+            if sequences_written_count > 0:
+                if self.verbose:
+                    logging.info(f"Successfully exported {sequences_written_count} pre-mRNA sequences to {output_fasta_path}")
+                else:
+                    logging.debug(f"Successfully exported {sequences_written_count} pre-mRNA sequences to {output_fasta_path}")
+                return output_fasta_path
+            else:
+                logging.warning(f"No pre-mRNA sequences were written to {output_fasta_path}. This could be due to all genes being excluded or other issues.")
+                
+                if os.path.exists(output_fasta_path) and os.path.getsize(output_fasta_path) == 0:
+                    try:
+                        os.remove(output_fasta_path)
+                        logging.info(f"Removed empty pre-mRNA FASTA file: {output_fasta_path}")
+                    except OSError as oe:
+                        logging.error(f"Error removing empty pre-mRNA FASTA file {output_fasta_path}: {oe}")
+                return None
+
+        except Exception as e:
+            logging.error(f"An error occurred during pre-mRNA export to {output_fasta_path}: {e}")
+            
+            if os.path.exists(output_fasta_path):
+                try:
+                    os.remove(output_fasta_path)
+                    logging.info(f"Removed potentially incomplete pre-mRNA FASTA file due to error: {output_fasta_path}")
+                except OSError as oe:
+                    logging.error(f"Error removing incomplete pre-mRNA FASTA file {output_fasta_path}: {oe}")
+            return None
 
     def extract_premrna_sequences_per_gene(self, gene_ids: Union[str, List[str]], 
                                       output_path: Optional[str] = None) -> Dict[str, str]:
@@ -495,3 +583,128 @@ class Genome:
             logging.info(f"Extracted sequences for {len(sequences)} genes to {output_path}")
         
         return sequences 
+    
+    def export_genome_data(self, output_dir: str, exclude_ids: Optional[List[str]] = None, force_overwrite: bool = False) -> Tuple[str, str]:
+        """
+        Exports genome data to FASTA (cDNA) and GTF files.
+
+        FASTA Naming: {reference_name}.{e_release}.cdna.{tsl_string}.{exclude_str}.fa.gz
+        GTF Naming:   {reference_name}.{e_release}.gtf.{exclude_str}.gz
+
+        Args:
+            output_dir: The directory to save the exported files.
+            exclude_ids: An optional list of gene, transcript, or exon IDs to exclude.
+
+        Returns:
+            A tuple containing the paths to the exported FASTA and GTF files.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        exclude_ids_set = set(exclude_ids) if exclude_ids else set()
+        # --- Prepare FASTA file --- 
+        
+        e_release_str = self.e_release if self.e_release else "no_release"
+
+        # Biotype suffix
+        biotype_suffix = ""
+        if self.biotype_to_keep:
+            if len(self.biotype_to_keep) == 1:
+                biotype_suffix = f".{self.biotype_to_keep[0]}"
+            else:
+                biotype_suffix = f".{'_'.join(self.biotype_to_keep)}"
+        
+        # Exclusion suffix
+        exclusion_suffix = ""
+        log_message_exclusion_details = " (all IDs)"
+        if exclude_ids_set:
+            if len(exclude_ids_set) == 1:
+                single_excluded_id = list(exclude_ids_set)[0]
+                exclusion_suffix = f".excluding_{single_excluded_id}"
+                log_message_exclusion_details = f" (excluding ID '{single_excluded_id}')"
+            else:
+                exclusion_suffix = f".excluding_{len(exclude_ids_set)}_ids"
+                log_message_exclusion_details = f" (excluding {len(exclude_ids_set)} IDs)"
+
+        if self.tsl_to_keep:
+            tsl_str = f".tsl{'_'.join(str(tsl) if tsl is not None else 'NA' for tsl in self.tsl_to_keep)}"
+        else:
+            tsl_str = ""
+        
+        if biotype_suffix == "" and tsl_str == "" and exclusion_suffix == "":
+            fasta_filename = f"{self.reference_name}.{e_release_str}.cdna.all.fa.gz"
+        else:
+            fasta_filename = f"{self.reference_name}.{e_release_str}.cdna{biotype_suffix}{tsl_str}{exclusion_suffix}.fa.gz"
+        output_fasta_path = os.path.join(output_dir, fasta_filename)
+
+        if os.path.exists(output_fasta_path) and not force_overwrite:
+            if self.verbose:
+                logging.info(f"Output file already exists: {output_fasta_path}. Skipping export.")
+            else:
+                logging.debug(f"Output file already exists: {output_fasta_path}. Skipping export.")
+        elif os.path.exists(output_fasta_path) and force_overwrite:
+            if self.verbose:
+                logging.info(f"Overwriting existing file: {output_fasta_path}")
+            else:
+                logging.debug(f"Overwriting existing file: {output_fasta_path}")
+            os.remove(output_fasta_path)
+        
+        logging.debug(f"Exporting cDNA FASTA to: {output_fasta_path}{log_message_exclusion_details}")
+            
+        transcripts_written_count = 0
+        with gzip.open(output_fasta_path, 'wt') as f_fasta_out:
+            for transcript in self.transcripts: 
+                if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
+                    continue
+                if transcript.sequence:
+                    f_fasta_out.write(f">{transcript.transcript_id} gene_id={transcript.gene_id}\\n{transcript.sequence}\\n")
+                    transcripts_written_count += 1
+                else:
+                    logging.debug(f"Transcript {transcript.transcript_id} (gene {transcript.gene_id}) has no sequence. Not written to FASTA.")
+        
+        if self.verbose:
+            logging.info(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
+        else:
+            logging.debug(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
+
+        # --- Prepare GTF file --- 
+        gtf_filename = f"{self.reference_name}.{e_release_str}{biotype_suffix}{exclusion_suffix}.gtf.gz"
+        output_gtf_path = os.path.join(output_dir, gtf_filename)
+        
+        logging.debug(f"Exporting GTF to: {output_gtf_path}{log_message_exclusion_details}")
+        
+        gtf_entries_written = 0
+        with gzip.open(output_gtf_path, 'wt') as f_gtf_out:
+            
+            f_gtf_out.write(f"#!genome-build {self.reference_name}\\n")
+            f_gtf_out.write(f"#!genome-version {e_release_str}\\n")
+            f_gtf_out.write(f"#!genebuild-last-updated {datetime.now().strftime('%Y-%m-%d')}\\n")
+
+            source_tag = "custom_export" # Or use self.gtf_path if that was the original source
+
+            for gene in self.genes: # self.genes are already biotype filtered
+                if gene.gene_id in exclude_ids_set:
+                    continue
+                f_gtf_out.write(gene.to_gtf_entry(source=source_tag) + "\\n")
+                gtf_entries_written += 1
+                for transcript in gene.transcripts: # These are TSL/biotype filtered if gene.transcripts come from self._transcripts
+                    if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set: # Redundant check for gene_id if already checked for gene
+                        continue
+                    f_gtf_out.write(transcript.to_gtf_entry(source=source_tag) + "\\n")
+                    gtf_entries_written += 1
+                    # Exons should be sorted by start position for GTF
+                    sorted_exons = sorted(transcript.exons, key=lambda ex: ex.start)
+                    for exon in sorted_exons:
+                        if exon.exon_id in exclude_ids_set or exon.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
+                            continue
+                        # Exon needs chromosome, strand, gene_id from its transcript for GTF
+                        f_gtf_out.write(exon.to_gtf_entry(chromosome=transcript.chromosome, 
+                                                              strand=transcript.strand, 
+                                                              gene_id=transcript.gene_id, 
+                                                              source=source_tag) + "\\n")
+                        gtf_entries_written += 1
+        
+        if self.verbose:
+            logging.info(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
+        else:
+            logging.debug(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
+        
+        return output_fasta_path, output_gtf_path

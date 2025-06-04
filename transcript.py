@@ -221,3 +221,21 @@ class Transcript:
             genomic_interval_end = max(start_genomic, end_genomic)
 
             return f"{self.chromosome}:{genomic_interval_start}-{genomic_interval_end}:{self.strand}" 
+
+    def to_gtf_entry(self, source: str = "custom") -> str:
+        """
+        Returns a GTF formatted string for this transcript.
+        'source' is customizable. Attributes follow GTF specification.
+        """
+        attributes = [
+            f'gene_id "{self.gene_id}"',
+            f'transcript_id "{self.transcript_id}"'
+        ]
+        if self.biotype:
+            attributes.append(f'transcript_biotype "{self.biotype}"')
+        if self.support_level is not None:
+            attributes.append(f'transcript_support_level "{self.support_level}"') 
+        
+        attributes_str = "; ".join(attributes) + ";"
+        
+        return f"{self.chromosome}\t{source}\ttranscript\t{self.start}\t{self.end}\t.\t{self.strand}\t.\t{attributes_str}" 
