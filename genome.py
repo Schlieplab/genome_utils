@@ -12,36 +12,48 @@ from .transcript import Transcript
 from .exon import Exon
 
 class Genome:
-    def __init__(self, reference_name: str, annotation_version: Optional[str] = None,
+    """
+    A Genome class using Biopython to load and manipulate genome sequences from Ensembl.
+    """
+    def __init__(self, 
+                 reference_name: str, 
+                 e_release: Optional[str] = None,
                  gtf_path: Optional[str] = None, 
                  transcript_fasta_paths: Optional[Union[str, List[str]]] = None,
                  primary_assembly_path: Optional[str] = None,
                  tsl_to_keep: Optional[List[Optional[int]]] = None,
-                 protein_coding_only: bool = False) -> None:
+                 biotype_to_keep: Optional[List[str]] = None,
+                 verbose: bool = False
+                 ) -> None:
         """
-        A Genome class using Biopython to load and manipulate genome sequences.
+        Initialize the Genome object.
 
         Parameters:
-        - reference_name: E.g. 'GRCm38'
-        - annotation_version: Annotation version/release (e.g. 113)
+        - reference_name: E.g. 'GRCm38' or 'GRCh38'
+        - e_release: The Ensembl release version. 
         - gtf_path: Path to the GTF file
         - transcript_fasta_paths: Path(s) to transcript FASTA file(s)
         - primary_assembly_path: Path to the primary assembly FASTA file
         - tsl_to_keep: Optional list of TSL values to keep (e.g., [1, 2, None]). 
                        Transcripts not matching these TSLs will be excluded.
-        - protein_coding_only: If True (default), only protein-coding transcripts are loaded.
+                       If None, all transcripts are loaded.
+        - biotype_to_keep: Optional list of gene biotypes to keep (e.g., ['protein_coding', 'lncRNA']).
+                       If None, all genes are loaded.
+        - verbose: If True, print verbose output.
         """
         
         self.reference_name: str = reference_name
-        self.annotation_version: Optional[str] = annotation_version
+        self.e_release: Optional[str] = e_release
         self.gtf_path: Optional[str] = gtf_path
         self.primary_assembly_path: Optional[str] = primary_assembly_path
-        self.protein_coding_only: bool = protein_coding_only
+        self.biotype_to_keep: Optional[List[str]] = biotype_to_keep
+        self.tsl_to_keep: Optional[List[Optional[int]]] = tsl_to_keep
+        self.verbose: bool = verbose
         
-        if tsl_to_keep is not None:
-            self.tsl_to_keep: Optional[set] = set(tsl_to_keep)
-        else:
-            self.tsl_to_keep: Optional[set] = None
+        self._genes: Dict[str, Gene] = {}  # gene_id -> Gene
+        self._transcripts: Dict[str, Transcript] = {}  # transcript_id -> Transcript
+        self._exons: Dict[str, Exon] = {}  # exon_id -> Exon
+        self._indexed: bool = False
         
         # Handle either a single path or a list of paths
         if transcript_fasta_paths is not None:
@@ -50,20 +62,18 @@ class Genome:
             else:
                 self.transcript_fasta_paths: List[str] = [transcript_fasta_paths]
         else:
+            if self.verbose:
+                logging.warning("No transcript FASTA paths provided. No transcripts will be loaded.")
             self.transcript_fasta_paths: List[str] = []
-        
-        # Initialize data structures
-        self._genes: Dict[str, Gene] = {}  # gene_id -> Gene
-        self._transcripts: Dict[str, Transcript] = {}  # transcript_id -> Transcript
-        self._transcript_sequences: Dict[str, str] = {}  # transcript_id -> sequence
-        self._exons: Dict[str, Exon] = {}  # exon_id -> Exon
-        self._indexed: bool = False
+
+    def __str__(self) -> str:
+        return f"Genome(reference_name={self.reference_name}, e_release={self.e_release}, gtf_path={self.gtf_path}, primary_assembly_path={self.primary_assembly_path}, tsl_to_keep={self.tsl_to_keep}, biotype_to_keep={self.biotype_to_keep}, verbose={self.verbose})"
     
     def index(self, overwrite: bool = False) -> None:
         """
         Parse annotation files and build indices for genes, transcripts, exons, and sequences.
         
-        Args:
+        Parameters:
             overwrite: If True, rebuild indices even if they already exist
         """
         if self._indexed and not overwrite:
@@ -99,13 +109,15 @@ class Genome:
                     continue
                 
                 # Extract feature fields
-                seqname, source, feature_type, start, end, score, strand, frame, attributes = fields
+                (seqname, source, 
+                 feature_type, start, 
+                 end, score, 
+                 strand, frame, 
+                 attributes) = fields
                 
-                # Skip if not gene, transcript, or exon
                 if feature_type not in ['gene', 'transcript', 'exon']:
                     continue
                 
-                # Parse attributes
                 attr_dict: Dict[str, str] = {}
                 for attr in attributes.split(';'):
                     attr = attr.strip()
@@ -123,9 +135,9 @@ class Genome:
                     gene_name: str = attr_dict.get('gene_name', gene_id)
                     biotype: Optional[str] = attr_dict.get('gene_biotype', attr_dict.get('biotype', None))
                     
-                    # If protein_coding_only is True, skip non-protein-coding genes
-                    if self.protein_coding_only and biotype != 'protein_coding':
-                        logging.debug(f"Skipping non-protein-coding gene {gene_id} (biotype: {biotype}) during GTF parsing because protein_coding_only is True.")
+                    if self.biotype_to_keep and biotype not in self.biotype_to_keep:
+                        if self.verbose:
+                            logging.debug(f"Skipping non-protein-coding gene {gene_id} (biotype: {biotype}) during GTF parsing because biotype_to_keep is True.")
                         continue
                     
                     if gene_id:
@@ -145,11 +157,6 @@ class Genome:
                     gene_id: Optional[str] = attr_dict.get('gene_id')
                     biotype: Optional[str] = attr_dict.get('transcript_biotype', attr_dict.get('biotype', None))
                     
-                    if self.protein_coding_only and biotype != 'protein_coding':
-                        logging.debug(f"Skipping non-protein-coding transcript {transcript_id} (biotype: {biotype}) in gene {gene_id} because protein_coding_only is True.")
-                        continue
-                    
-                    # Extract support level - could be 'transcript_support_level' or 'tsl'
                     support_level_str: Optional[str] = attr_dict.get('transcript_support_level', 
                                                                     attr_dict.get('tsl', None))
                     support_level: Optional[int] = None
@@ -181,14 +188,13 @@ class Genome:
                         )
                         self._transcripts[transcript_id] = transcript
                         
-                        # Add to gene if it exists
                         if gene_id in self._genes:
                             self._genes[gene_id].add_transcript(transcript)
                         
                 
                 elif feature_type == 'exon':
                     
-                    exon_id: str = attr_dict.get('exon_id', f"{seqname}:{start}-{end}")
+                    exon_id: str = attr_dict.get('exon_id', f"{seqname}:{start}-{end}:{strand}")
                     transcript_id: Optional[str] = attr_dict.get('transcript_id')
                     
                     if exon_id and transcript_id and transcript_id in self._transcripts:
@@ -226,7 +232,6 @@ class Genome:
                     # Store sequence if we have this transcript
                     if transcript_id in self._transcripts:
                         sequence: str = str(record.seq)
-                        self._transcript_sequences[transcript_id] = sequence
                         self._transcripts[transcript_id].sequence = sequence
     
     def gene_by_id(self, gene_id: str) -> Gene:
@@ -265,116 +270,11 @@ class Genome:
         
         return list(self._genes.values())
     
-    def get_sequence_for_transcript_id(self, transcript_id: str) -> str:
-        """Get the sequence for a transcript by ID."""
-        if not self._indexed:
-            self.index()
-        
-        if transcript_id in self._transcript_sequences:
-            return self._transcript_sequences[transcript_id]
-        
-        raise ValueError(f"No sequence found for transcript: {transcript_id}")
-    
-    def get_transcript_subsequence(self, transcript_id: str, position: int, length: int) -> Optional[str]:
-        """
-        Get a subsequence from a transcript by ID.
-        
-        Args:
-            transcript_id (str): The ID of the transcript
-            position (int): 1-based position within the transcript
-            length (int): Length of the subsequence to extract
-            
-        Returns:
-            Optional[str]: The requested subsequence, or None if not available
-        """
-        if not self._indexed:
-            self.index()
-            
-        # Get the base ID without version if present
-        base_id = transcript_id.split('.')[0]
-        
-        try:
-            transcript = self.transcript_by_id(base_id)
-            return transcript.get_subsequence(position, length)
-        except ValueError:
-            return None
-    
-    def get_chromosomal_positions(
-        self, transcript_id: str, positions: List[int], window_length: int
-    ) -> List[Optional[str]]:
-        """
-        Get chromosomal positions for multiple positions within a transcript.
-        
-        Args:
-            transcript_id (str): The ID of the transcript
-            positions (List[int]): List of 1-based positions within the transcript
-            window_length (int): Length of the window at each position
-            
-        Returns:
-            List[Optional[str]]: List of chromosomal coordinates in format "chrom:start-end:strand"
-        """
-        if not self._indexed:
-            self.index()
-            
-        # Get the base ID without version if present
-        base_id = transcript_id.split('.')[0]
-        
-        try:
-            transcript = self.transcript_by_id(base_id)
-            return transcript.get_chromosomal_positions(positions, window_length)
-        except ValueError:
-            # Return None for each position if transcript not found
-            return [None] * len(positions)
-    
-    def get_chromosomal_position(
-        self, transcript_id: str, position: int, window_length: int
-    ) -> Optional[str]:
-        """
-        Get chromosomal position for a single position within a transcript.
-        
-        Args:
-            transcript_id (str): The ID of the transcript
-            position (int): 1-based position within the transcript
-            window_length (int): Length of the window starting at the position
-            
-        Returns:
-            Optional[str]: Chromosomal coordinates in format "chrom:start-end:strand"
-        """
-        results = self.get_chromosomal_positions(
-            transcript_id=transcript_id,
-            positions=[position],
-            window_length=window_length
-        )
-        return results[0] if results else None
-    
-    def get_exon_at_transcript_position(self, transcript_id: str, position: int) -> Optional[Exon]:
-        """
-        Get the exon containing a specific position in a transcript.
-        
-        Args:
-            transcript_id (str): The ID of the transcript
-            position (int): 1-based position within the transcript
-            
-        Returns:
-            Optional[Exon]: The exon containing the position, or None if not found
-        """
-        if not self._indexed:
-            self.index()
-            
-        # Get the base ID without version if present
-        base_id = transcript_id.split('.')[0]
-        
-        try:
-            transcript = self.transcript_by_id(base_id)
-            return transcript.get_exon_by_position(position)
-        except ValueError:
-            return None
-    
     def get_sequence_from_primary_assembly(self, chromosome: str, start: int, end: int) -> Optional[str]:
         """
         Get a sequence from the primary assembly by loading only the needed chromosome.
         
-        Args:
+        Parameters:
             chromosome (str): Chromosome name
             start (int): 1-based start position
             end (int): 1-based end position
@@ -408,7 +308,7 @@ class Genome:
         Yields pre-mRNA sequences as SeqRecord objects for each gene from the primary assembly.
         Sequences are yielded chromosome by chromosome, and genes are sorted by start position.
 
-        Args:
+        Parameters:
             exclude_genes (Optional[Union[str, List[str]]]): Gene ID(s) to exclude.
                 Can be a single gene ID string or a list of gene IDs.
 
@@ -431,14 +331,10 @@ class Genome:
             else:
                 exclude_set.update(exclude_genes)
 
-        # Group genes by chromosome and sort them by start position
         genes_by_chromosome: Dict[str, List[Gene]] = {}
-        processed_gene_ids = set() # To avoid processing a gene multiple times if it appears in multiple lists (should not happen with self.genes but good practice)
+        processed_gene_ids = set() 
+        all_genes = self.genes 
         
-        all_genes = self.genes # Access the property to get the list of Gene objects
-        
-        # Sort all genes first by chromosome, then by start position
-        # This ensures consistent ordering when reading chromosome by chromosome
         sorted_genes = sorted(all_genes, key=lambda g: (g.chromosome, g.start))
 
         excluded_count = 0
@@ -503,7 +399,7 @@ class Genome:
         """
         Extract pre-mRNA sequences for specific genes and optionally save them to a FASTA file.
         
-        Args:
+        Parameters:
             gene_ids (Union[str, List[str]]): Gene ID(s) to extract sequences for.
                 Can be a single gene ID string or a list of gene IDs.
             output_path (Optional[str]): If provided, save the sequences to this FASTA file.

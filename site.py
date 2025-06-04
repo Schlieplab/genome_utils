@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, TYPE_CHECKING
 import re
+import logging
 
 if TYPE_CHECKING:
     from .transcript import Transcript
@@ -25,8 +26,8 @@ class Site:
             try:
                 return chrom, int(start_str), int(end_str), strand_char
             except ValueError:
-                return None, None, None, None # Or log error
-        return None, None, None, None # Or log error
+                return None, None, None, None
+        return None, None, None, None
 
     def to_gtf_attributes(self, additional_attrs: Optional[dict] = None) -> str:
         """Helper to create a GTF attribute string."""
@@ -49,7 +50,7 @@ class RepeatedSite(Site):
     def to_gtf_record(self, source: str, feature_type: str = "repeated_site") -> Optional[str]:
         chrom, start, end, strand = Site._parse_chrom_pos(self.chromosomal_position)
         if not all([chrom, start, end, strand]):
-            return None # Cannot form valid GTF
+            return None
 
         attributes_dict = {
             "parent_target_id": self.parent_target_id,
@@ -59,7 +60,6 @@ class RepeatedSite(Site):
         
         attribute_str = self.to_gtf_attributes(attributes_dict)
         
-        # GTF fields: seqname, source, feature, start, end, score, strand, frame, attributes
         return f"{chrom}\t{source}\t{feature_type}\t{start}\t{end}\t.\t{strand}\t.\t{attribute_str}"
 
 @dataclass
@@ -75,12 +75,11 @@ class CandidateTarget(Site):
 
     def add_repeated_site(self, site: RepeatedSite):
         if site.parent_target_id != self.id:
-            # Or raise an error, or auto-correct parent_target_id
-            print(f"Warning: Adding repeated site with parent_target_id {site.parent_target_id} to CandidateTarget {self.id}")
-            site.parent_target_id = self.id # Auto-correct
+            logging.warning(f"Adding repeated site with parent_target_id {site.parent_target_id} to CandidateTarget {self.id}")
+            site.parent_target_id = self.id
         self.repeated_sites.append(site)
 
-    def filter_repeated_sites(self, ddg_threshold: float):
+    def filter_repeated_sites_by_ddg(self, ddg_threshold: float):
         """Filters self.repeated_sites in-place, keeping sites with ddG <= threshold."""
         self.repeated_sites = [
             rs for rs in self.repeated_sites 
@@ -104,9 +103,6 @@ class CandidateTarget(Site):
         if self.pedersen_steady_state is not None:
              attributes_dict["pedersen_steady_state"] = f"{self.pedersen_steady_state:.3f}"
         attributes_dict["num_repeated_sites"] = len(self.repeated_sites)
-        
-        # Could add transcript_ids, exon_ids if desired
-        # attributes_dict["transcript_ids"] = ",".join([t.transcript_id for t in self.transcripts])
 
         attribute_str = self.to_gtf_attributes(attributes_dict)
         

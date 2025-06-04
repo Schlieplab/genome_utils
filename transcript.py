@@ -6,33 +6,49 @@ from .exon import Exon
 
 class Transcript:
     """Class representing a transcript with exons."""
-    def __init__(self, transcript_id: str, gene_id: str, chromosome: str, 
-                 start: int, end: int, strand: str, biotype: Optional[str] = None,
-                 support_level: Optional[int] = None) -> None:
+    def __init__(self, 
+                 transcript_id: str, 
+                 gene_id: str, 
+                 chromosome: str, 
+                 start: int, 
+                 end: int, 
+                 strand: str, 
+                 biotype: Optional[str] = None,
+                 support_level: Optional[int] = None
+                 ) -> None:
+        """
+        Initialize the Transcript object.
+
+        Parameters:
+            - transcript_id: The ID of the transcript.
+            - gene_id: The ID of the gene.
+            - chromosome: The chromosome of the transcript.
+            - start: The start position of the transcript in 1-based genomic coordinates.
+            - end: The end position of the transcript in 1-based genomic coordinates.
+            - strand: The strand of the transcript (+ or -).
+            - biotype: The biotype of the transcript.
+            - support_level: The support level of the transcript.
+        """
+        
         self.transcript_id: str = transcript_id
         self.gene_id: str = gene_id
         self.chromosome: str = chromosome
-        self.start: int = start  # 1-based genomic coordinates
-        self.end: int = end      # 1-based genomic coordinates
+        self.start: int = start  
+        self.end: int = end     
         self.strand: str = strand
         self.biotype: Optional[str] = biotype
-        self.support_level: Optional[int] = support_level  # 1-5 or None
+        self.support_level: Optional[int] = support_level  
         self.exons: List['Exon'] = []
-        self._sequence: Optional[str] = ""  # Initialize as empty string
+        self._sequence: Optional[str] = None
         self._genomic_coordinate_map: Optional[Dict[int, int]] = None
+    
+    def __str__(self) -> str:
+        return f"Transcript(transcript_id={self.transcript_id}, gene_id={self.gene_id}, chromosome={self.chromosome}, start={self.start}, end={self.end}, strand={self.strand}, biotype={self.biotype}, support_level={self.support_level})"
     
     @property
     def length(self) -> int:
         """Get the total length of the transcript (sum of exon lengths)."""
         return len(self._sequence)
-    
-    def add_exon(self, exon: 'Exon') -> None:
-        """Add an exon to this transcript."""
-        self.exons.append(exon)
-        # Keep exons sorted by position
-        self.exons.sort(key=lambda e: e.start)
-        # Reset the coordinate map since exon structure changed
-        self._genomic_coordinate_map = None
     
     def __len__(self) -> int:
         """Return the total length of the transcript."""
@@ -47,6 +63,14 @@ class Transcript:
     def sequence(self, seq: str) -> None:
         """Set the transcript sequence."""
         self._sequence = seq
+        
+    def add_exon(self, exon: 'Exon') -> None:
+        """Add an exon to this transcript."""
+        self.exons.append(exon)
+        # Keep exons sorted by position
+        self.exons.sort(key=lambda e: e.start)
+        # Reset the coordinate map since exon structure changed
+        self._genomic_coordinate_map = None
         
     @property
     def exon_intervals(self) -> List[Tuple[int, int]]:
@@ -83,18 +107,16 @@ class Transcript:
             sorted_exons = sorted(self.exons, key=lambda e: e.start)
             
             for exon in sorted_exons:
-                exon_length = exon.end - exon.start + 1
-                for offset in range(exon_length):
-                    mapping[transcript_pos] = exon.start + offset
+                for genomic_coord in range(exon.start, exon.end + 1):
+                    mapping[transcript_pos] = genomic_coord
                     transcript_pos += 1
         else:
             # Reverse strand: process exons in reverse genomic order (5' to 3' for transcript)
             sorted_exons = sorted(self.exons, key=lambda e: e.start, reverse=True)
             
             for exon in sorted_exons:
-                exon_length = exon.end - exon.start + 1
-                for offset in range(exon_length):
-                    mapping[transcript_pos] = exon.end - offset
+                for genomic_coord in range(exon.end, exon.start - 1, -1):
+                    mapping[transcript_pos] = genomic_coord
                     transcript_pos += 1
                     
         return mapping
@@ -105,7 +127,7 @@ class Transcript:
         """
         Get the exon containing a specific position in the transcript.
         
-        Args:
+        Parameters:
             position (int): 1-based position in the transcript
             
         Returns:
@@ -134,7 +156,7 @@ class Transcript:
         """
         Get a subsequence from this transcript starting at the specified position.
         
-        Args:
+        Parameters:
             start_pos (int): 1-based start position in the transcript
             length (int): Length of the subsequence to return
             
@@ -152,63 +174,50 @@ class Transcript:
             return None
             
         return self._sequence[idx:idx + length]
-        
-    def get_chromosomal_positions(self, positions: List[int], window_length: int) -> List[Optional[str]]:
+
+    def get_chromosomal_position_in_chrmosome(self, position: int) -> Optional[int]:
         """
-        Get chromosomal coordinates for specified sequences within this transcript.
+        Get chromosomal position for a single position within a chromosome.
         
-        Args:
-            positions (List[int]): List of 1-based positions within the transcript
-            window_length (int): Length of the window/sequence at each position
-            
+        Parameters:
+            position (int): 1-based position within the transcript
+        
         Returns:
-            List[Optional[str]]: Chromosomal coordinates in format "chrom:start-end:strand"
+            Optional[str]: Chromosomal coordinates in format "chrom:start-end:strand"
         """
-        # Build mapping from transcript to genomic coordinates
+        
         mapping = self.genomic_coordinate_map
-        
-        if not mapping:
-            return [None] * len(positions)
+        if not mapping: 
+            return None
             
-        results: List[Optional[str]] = []
-        
-        for pos in positions:
-            try:
-                # Check if both start and end positions are mapped
-                start_genomic = mapping.get(pos)
-                end_genomic = mapping.get(pos + window_length - 1)
-                
-                if start_genomic is None or end_genomic is None:
-                    results.append(None)
-                    continue
-                    
-                # Sort the coordinates in ascending order regardless of strand
-                start, end = min(start_genomic, end_genomic), max(start_genomic, end_genomic)
-                
-                # Format result string
-                result = f"{self.chromosome}:{start}-{end}:{self.strand}"
-                results.append(result)
-                
-            except Exception as e:
-                results.append(None)
-                
-        return results
+        return mapping.get(position)
     
-    def get_chromosomal_position(
-        self, position: int, window_length: int
+    def get_chromosomal_window(
+        self, position: int, window_length: int = 1
         ) -> Optional[str]:
             """
-            Get chromosomal position for a single position within a transcript.
+            Get chromosomal position for a window within a transcript.
             
-            Args:
+            Parameters:
                 position (int): 1-based position within the transcript
-                window_length (int): Length of the window starting at the position
+                window_length (int): Length of the window starting at the position (default: 1)
                 
             Returns:
                 Optional[str]: Chromosomal coordinates in format "chrom:start-end:strand"
             """
-            results = self.get_chromosomal_positions(
-                positions=[position],
-                window_length=window_length
-            )
-            return results[0] if results else None 
+            if window_length < 1:
+                return None
+
+            start_transcript_pos = position
+            end_transcript_pos = position + window_length - 1
+
+            start_genomic = self.get_chromosomal_position_in_chrmosome(start_transcript_pos)
+            end_genomic = self.get_chromosomal_position_in_chrmosome(end_transcript_pos)
+
+            if start_genomic is None or end_genomic is None:
+                return None
+
+            genomic_interval_start = min(start_genomic, end_genomic)
+            genomic_interval_end = max(start_genomic, end_genomic)
+
+            return f"{self.chromosome}:{genomic_interval_start}-{genomic_interval_end}:{self.strand}" 
