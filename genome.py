@@ -360,9 +360,10 @@ class Genome:
 
         if os.path.exists(output_fasta_path) and not force_overwrite:
             if self.verbose:
-                logging.info(f"Output file already exists: {output_fasta_path}. Skipping export.")
+                logging.info(f"Using existing FASTA file: {output_fasta_path}. Export will be skipped.")
             else:
-                logging.debug(f"Output file already exists: {output_fasta_path}. Skipping export.")
+                logging.debug(f"Using existing FASTA file: {output_fasta_path}. Export will be skipped.")
+            return output_fasta_path
         elif os.path.exists(output_fasta_path) and force_overwrite:
             if self.verbose:
                 logging.info(f"Overwriting existing file: {output_fasta_path}")
@@ -634,77 +635,95 @@ class Genome:
         else:
             fasta_filename = f"{self.reference_name}.{e_release_str}.cdna{biotype_suffix}{tsl_str}{exclusion_suffix}.fa.gz"
         output_fasta_path = os.path.join(output_dir, fasta_filename)
+        fasta_file_exists = os.path.exists(output_fasta_path)
 
-        if os.path.exists(output_fasta_path) and not force_overwrite:
+        if fasta_file_exists and not force_overwrite:
             if self.verbose:
-                logging.info(f"Output file already exists: {output_fasta_path}. Skipping export.")
+                logging.info(f"Using existing FASTA file: {output_fasta_path}. Export will be skipped.")
             else:
-                logging.debug(f"Output file already exists: {output_fasta_path}. Skipping export.")
-        elif os.path.exists(output_fasta_path) and force_overwrite:
-            if self.verbose:
-                logging.info(f"Overwriting existing file: {output_fasta_path}")
-            else:
-                logging.debug(f"Overwriting existing file: {output_fasta_path}")
-            os.remove(output_fasta_path)
-        
-        logging.debug(f"Exporting cDNA FASTA to: {output_fasta_path}{log_message_exclusion_details}")
-            
-        transcripts_written_count = 0
-        with gzip.open(output_fasta_path, 'wt') as f_fasta_out:
-            for transcript in self.transcripts: 
-                if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
-                    continue
-                if transcript.sequence:
-                    f_fasta_out.write(f">{transcript.transcript_id} gene_id={transcript.gene_id}\\n{transcript.sequence}\\n")
-                    transcripts_written_count += 1
-                else:
-                    logging.debug(f"Transcript {transcript.transcript_id} (gene {transcript.gene_id}) has no sequence. Not written to FASTA.")
-        
-        if self.verbose:
-            logging.info(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
+                logging.debug(f"Using existing FASTA file: {output_fasta_path}. Export will be skipped.")
         else:
-            logging.debug(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
+            if fasta_file_exists and force_overwrite: # Implies force_overwrite is True
+                if self.verbose:
+                    logging.info(f"Overwriting existing FASTA file: {output_fasta_path}")
+                else:
+                    logging.debug(f"Overwriting existing FASTA file: {output_fasta_path}")
+                os.remove(output_fasta_path)
+            # else: # File does not exist, or did exist and was removed by force_overwrite
+
+            logging.debug(f"Exporting cDNA FASTA to: {output_fasta_path}{log_message_exclusion_details}")
+            
+            transcripts_written_count = 0
+            with gzip.open(output_fasta_path, 'wt') as f_fasta_out:
+                for transcript in self.transcripts: 
+                    if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
+                        continue
+                    if transcript.sequence:
+                        f_fasta_out.write(f">{transcript.transcript_id} gene_id={transcript.gene_id}\n{transcript.sequence}\n")
+                        transcripts_written_count += 1
+                    else:
+                        logging.debug(f"Transcript {transcript.transcript_id} (gene {transcript.gene_id}) has no sequence. Not written to FASTA.")
+            
+            if self.verbose:
+                logging.info(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
+            else:
+                logging.debug(f"Wrote {transcripts_written_count} transcripts to {output_fasta_path}")
 
         # --- Prepare GTF file --- 
         gtf_filename = f"{self.reference_name}.{e_release_str}{biotype_suffix}{exclusion_suffix}.gtf.gz"
         output_gtf_path = os.path.join(output_dir, gtf_filename)
+        gtf_file_exists = os.path.exists(output_gtf_path)
         
-        logging.debug(f"Exporting GTF to: {output_gtf_path}{log_message_exclusion_details}")
-        
-        gtf_entries_written = 0
-        with gzip.open(output_gtf_path, 'wt') as f_gtf_out:
-            
-            f_gtf_out.write(f"#!genome-build {self.reference_name}\\n")
-            f_gtf_out.write(f"#!genome-version {e_release_str}\\n")
-            f_gtf_out.write(f"#!genebuild-last-updated {datetime.now().strftime('%Y-%m-%d')}\\n")
-
-            source_tag = "custom_export" # Or use self.gtf_path if that was the original source
-
-            for gene in self.genes: # self.genes are already biotype filtered
-                if gene.gene_id in exclude_ids_set:
-                    continue
-                f_gtf_out.write(gene.to_gtf_entry(source=source_tag) + "\\n")
-                gtf_entries_written += 1
-                for transcript in gene.transcripts: # These are TSL/biotype filtered if gene.transcripts come from self._transcripts
-                    if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set: # Redundant check for gene_id if already checked for gene
-                        continue
-                    f_gtf_out.write(transcript.to_gtf_entry(source=source_tag) + "\\n")
-                    gtf_entries_written += 1
-                    # Exons should be sorted by start position for GTF
-                    sorted_exons = sorted(transcript.exons, key=lambda ex: ex.start)
-                    for exon in sorted_exons:
-                        if exon.exon_id in exclude_ids_set or exon.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
-                            continue
-                        # Exon needs chromosome, strand, gene_id from its transcript for GTF
-                        f_gtf_out.write(exon.to_gtf_entry(chromosome=transcript.chromosome, 
-                                                              strand=transcript.strand, 
-                                                              gene_id=transcript.gene_id, 
-                                                              source=source_tag) + "\\n")
-                        gtf_entries_written += 1
-        
-        if self.verbose:
-            logging.info(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
+        if gtf_file_exists and not force_overwrite:
+            if self.verbose:
+                logging.info(f"Using existing GTF file: {output_gtf_path}. Export will be skipped.")
+            else:
+                logging.debug(f"Using existing GTF file: {output_gtf_path}. Export will be skipped.")
         else:
-            logging.debug(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
+            if gtf_file_exists and force_overwrite: # Implies force_overwrite is True
+                if self.verbose:
+                    logging.info(f"Overwriting existing GTF file: {output_gtf_path}")
+                else:
+                    logging.debug(f"Overwriting existing GTF file: {output_gtf_path}")
+                os.remove(output_gtf_path)
+            # else: # File does not exist or was removed
+
+            logging.debug(f"Exporting GTF to: {output_gtf_path}{log_message_exclusion_details}")
+            
+            gtf_entries_written = 0
+            with gzip.open(output_gtf_path, 'wt') as f_gtf_out:
+                
+                f_gtf_out.write(f"#!genome-build {self.reference_name}\n")
+                f_gtf_out.write(f"#!genome-version {e_release_str}\n")
+                f_gtf_out.write(f"#!genebuild-last-updated {datetime.now().strftime('%Y-%m-%d')}\n")
+
+                source_tag = "custom_export" # Or use self.gtf_path if that was the original source
+
+                for gene in self.genes: # self.genes are already biotype filtered
+                    if gene.gene_id in exclude_ids_set:
+                        continue
+                    f_gtf_out.write(gene.to_gtf_entry(source=source_tag) + "\n")
+                    gtf_entries_written += 1
+                    for transcript in gene.transcripts: # These are TSL/biotype filtered if gene.transcripts come from self._transcripts
+                        if transcript.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set: # Redundant check for gene_id if already checked for gene
+                            continue
+                        f_gtf_out.write(transcript.to_gtf_entry(source=source_tag) + "\n")
+                        gtf_entries_written += 1
+                        # Exons should be sorted by start position for GTF
+                        sorted_exons = sorted(transcript.exons, key=lambda ex: ex.start)
+                        for exon in sorted_exons:
+                            if exon.exon_id in exclude_ids_set or exon.transcript_id in exclude_ids_set or transcript.gene_id in exclude_ids_set:
+                                continue
+                            # Exon needs chromosome, strand, gene_id from its transcript for GTF
+                            f_gtf_out.write(exon.to_gtf_entry(chromosome=transcript.chromosome, 
+                                                          strand=transcript.strand, 
+                                                          gene_id=transcript.gene_id, 
+                                                          source=source_tag) + "\n")
+                            gtf_entries_written += 1
+            
+            if self.verbose:
+                logging.info(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
+            else:
+                logging.debug(f"Wrote {gtf_entries_written} entries to {output_gtf_path}")
         
         return output_fasta_path, output_gtf_path
