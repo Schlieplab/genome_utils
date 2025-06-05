@@ -484,7 +484,7 @@ class Genome:
             return None
 
     def extract_premrna_sequences_per_gene(self, gene_ids: Union[str, List[str]], 
-                                      output_path: Optional[str] = None) -> Dict[str, str]:
+                                      output_path: Optional[str] = None) -> Union[Dict[str, str], str]:
         """
         Extract pre-mRNA sequences for specific genes and optionally save them to a FASTA file.
         
@@ -583,7 +583,10 @@ class Genome:
                 SeqIO.write(records, output_handle, "fasta")
             logging.info(f"Extracted sequences for {len(sequences)} genes to {output_path}")
         
-        return sequences 
+        if len(gene_ids) == 1:
+            return sequences[gene_ids[0]]
+        else:
+            return sequences
     
     def export_genome_data(self, output_dir: str, exclude_ids: Optional[List[str]] = None, force_overwrite: bool = False) -> Tuple[str, str]:
         """
