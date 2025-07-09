@@ -1,7 +1,15 @@
-from .genome import Genome
+from .locus import Locus
+from .chromosome import Chromosome
 from .gene import Gene
 from .transcript import Transcript
 from .exon import Exon
-from .site import Site, CandidateTarget, RepeatedSite
+from .genome import Genome
 
-__all__ = ['Genome', 'Gene', 'Transcript', 'Exon', 'Site', 'CandidateTarget', 'RepeatedSite'] 
+__all__ = [
+    "Locus",
+    "Chromosome",
+    "Gene",
+    "Transcript",
+    "Exon",
+    "Genome",
+] 
