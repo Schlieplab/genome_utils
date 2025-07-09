@@ -15,6 +15,9 @@ class Chromosome(GenomeElement):
         """
         Initializes a Chromosome from a SeqRecord proxy.
         The ID, start, end, and strand are derived from the record.
+        Args:
+            seq_record: The SeqRecord proxy for the chromosome.
+            kwargs: Additional keyword arguments.
         """
         id = seq_record.id
         start = 1

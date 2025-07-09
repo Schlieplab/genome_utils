@@ -17,11 +17,16 @@ class Genome:
         """
         Initializes the Genome by indexing a FASTA file.
         Chromosomes are automatically created based on the sequences in the file.
+        Args:
+            id: The ID of the genome.
+            species: The species of the genome.
+            name: The name of the genome.
+            kwargs: Additional keyword arguments.
         """
         self.id = id
         self.species = species
         self.name = name
-        self.attributes: Dict[str, Any] = kwargs
+        self._attributes: Dict[str, Any] = kwargs
         self.chromosomes: Dict[str, Chromosome] = {}
 
         self._genes_by_id: Dict[str, Gene] = {}
@@ -96,10 +101,8 @@ class Genome:
 
     def chromosome_by_id(self, chromosome_id: str) -> Chromosome:
         """Get a chromosome by its ID using the index. Raises ValueError if not found."""
-        if not self._is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         try:
-            return self.chromosomes[chromosome_id]
+            return self[chromosome_id]
         except KeyError:
             raise ValueError(f"Chromosome with ID '{chromosome_id}' not found.")
 
@@ -136,19 +139,19 @@ class Genome:
         if not self._is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         return iter(self.chromosomes.values())
-    
+
     def __getattr__(self, name: str) -> Any:
         """Allow direct access to attributes in the attributes dictionary."""
         try:
-            return self.attributes[name]
+            return self._attributes[name]
         except KeyError:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
         
     def __setattr__(self, name: str, value: Any):
         """Allow setting attributes. Explicitly defined attributes are set normally. New, dynamic attributes are stored in the 'attributes' dictionary."""
-        if name in self.__dict__ or name in self.__class__.__dict__ or name == 'attributes' or not hasattr(self, 'attributes'):
+        if name in self.__dict__ or name in self.__class__.__dict__ or name == '_attributes' or not hasattr(self, '_attributes'):
             super().__setattr__(name, value)
         else:
-            self.attributes[name] = value
+            self._attributes[name] = value
             
     

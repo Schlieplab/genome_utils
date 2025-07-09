@@ -21,6 +21,18 @@ class Gene(GenomeElement):
                  strand: str, 
                  chromosome: Chromosome, 
                  **kwargs):
+        """
+        Initializes a Gene object.
+
+        Args:
+            id: The ID of the gene.
+            name: The name of the gene.
+            start: The genomic start position of the gene in chromosome.
+            end: The genomic end position of the gene in chromosome.
+            strand: The strand in which the gene is oriented.
+            chromosome: The chromosome that the gene is on.
+            kwargs: Additional keyword arguments.
+        """
         locus = Locus(chromosome.chromosome_id, start, end, strand)
         super().__init__(id, locus, chromosome, **kwargs)
         self.name = name

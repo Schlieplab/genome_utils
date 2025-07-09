@@ -16,9 +16,6 @@ class GenomeElement(ABC):
         self._children: List[GenomeElement] = []
         self._attributes: Dict[str, Any] = kwargs
     
-    @property
-    def locus(self) -> Locus:
-        return self.locus
     
     @property
     def chromosome_id(self) -> str:
@@ -48,13 +45,13 @@ class GenomeElement(ABC):
     
     def __setattr__(self, name: str, value: Any):
         """Allow setting attributes. Explicitly defined attributes are set normally. New, dynamic attributes are stored in the 'attributes' dictionary."""
-        if name in self.__dict__ or name in self.__class__.__dict__ or name == 'attributes' or not hasattr(self, 'attributes'):
+        if name in self.__dict__ or name in self.__class__.__dict__ or name == '_attributes' or not hasattr(self, '_attributes'):
             super().__setattr__(name, value)
         else:
             self._attributes[name] = value
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(id='{self._element_id}', locus={self.locus!r})"
+        return f"{self.__class__.__name__}(id='{self.id}', locus={self.locus!r})"
     
     def __eq__(self, other: GenomeElement) -> bool:
         return self.id == other.id
