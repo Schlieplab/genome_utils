@@ -1,9 +1,4 @@
-from .locus import Locus
-from .chromosome import Chromosome
-from .gene import Gene
-from .transcript import Transcript
-from .exon import Exon
-from .genome import Genome
+from .genome import Locus, Chromosome, Gene, Transcript, Exon, Genome
 
 __all__ = [
     "Locus",

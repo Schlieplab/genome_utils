@@ -10,11 +10,11 @@ class GenomeElement(ABC):
 
     def __init__(self, id: str, locus: Locus,
                  parent: Optional[GenomeElement] = None, **kwargs):
+        self._attributes: Dict[str, Any] = kwargs
         self.id = id
         self.locus = locus
         self._parent = parent
         self._children: List[GenomeElement] = []
-        self._attributes: Dict[str, Any] = kwargs
     
     
     @property

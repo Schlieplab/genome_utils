@@ -1,13 +1,15 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 from Bio.Seq import Seq
 from .genome_element import GenomeElement
-from .chromosome import Chromosome
-from .transcript import Transcript
 from .locus import Locus
 import os
 import gzip
 import logging
+
+if TYPE_CHECKING:
+    from .chromosome import Chromosome
+    from .transcript import Transcript
 
 
 class Gene(GenomeElement):
@@ -19,7 +21,7 @@ class Gene(GenomeElement):
                  start: int, 
                  end: int, 
                  strand: str, 
-                 chromosome: Chromosome, 
+                 chromosome: "Chromosome", 
                  **kwargs):
         """
         Initializes a Gene object.
@@ -39,16 +41,16 @@ class Gene(GenomeElement):
 
 
     @property
-    def transcripts(self) -> List[Transcript]:
+    def transcripts(self) -> List["Transcript"]:
         """Returns the list of transcripts (children) for this gene."""
         return self._children
 
-    def add_transcript(self, transcript: Transcript):
+    def add_transcript(self, transcript: "Transcript"):
         """Add a transcript to the gene."""
         transcript._parent = self
         self._children.append(transcript)
     
-    def get_chromosome(self) -> Chromosome:
+    def get_chromosome(self) -> "Chromosome":
         """Returns the chromosome that this gene is on."""
         return self._parent
     

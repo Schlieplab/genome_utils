@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import List
+from typing import List, TYPE_CHECKING
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from .genome_element import GenomeElement
-from .gene import Gene
 from .locus import Locus
+
+if TYPE_CHECKING:
+    from .gene import Gene
 
 
 class Chromosome(GenomeElement):
@@ -29,7 +31,7 @@ class Chromosome(GenomeElement):
 
 
     @property
-    def genes(self) -> List[Gene]:
+    def genes(self) -> List["Gene"]:
         """Returns the list of genes (children) for this chromosome."""
         return self._children
 
@@ -63,6 +65,6 @@ class Chromosome(GenomeElement):
         """
         return self._seq_record.seq
 
-    def add_gene(self, gene: Gene):
+    def add_gene(self, gene: "Gene"):
         gene._parent = self
         self._children.append(gene) 

@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 from Bio.Seq import Seq
 from .genome_element import GenomeElement
-from .exon import Exon
 from .locus import Locus
-from .gene import Gene
-from .chromosome import Chromosome
+
+if TYPE_CHECKING:
+    from .exon import Exon
+    from .gene import Gene
+
 
 class Transcript(GenomeElement):
     """Represents a transcript."""
@@ -16,7 +18,7 @@ class Transcript(GenomeElement):
                  end: int, 
                  strand: str, 
                  sequence: Seq,
-                 gene: Gene, 
+                 gene: "Gene", 
                  **kwargs):
         """
         Initializes a Transcript object.
@@ -34,11 +36,11 @@ class Transcript(GenomeElement):
         super().__init__(id, locus, gene, **kwargs)
         self.sequence = sequence
     @property
-    def exons(self) -> List[Exon]:
+    def exons(self) -> List["Exon"]:
         """Returns the list of exons (children) for this transcript."""
         return self._children
 
-    def add_exon(self, exon: Exon):
+    def add_exon(self, exon: "Exon"):
         """Add an exon to the transcript."""
         exon._parent = self
         self._children.append(exon) 
@@ -46,7 +48,7 @@ class Transcript(GenomeElement):
     def __len__(self) -> int:
         return len(self.sequence)
     
-    def get_gene(self) -> Gene:
+    def get_gene(self) -> "Gene":
         """Returns the gene that this transcript is on."""
         return self._parent
     

@@ -1,7 +1,10 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
 from .genome_element import GenomeElement
 from .locus import Locus
-from .transcript import Transcript
+
+if TYPE_CHECKING:
+    from .transcript import Transcript
 
 class Exon(GenomeElement):
     """Represents an exon."""
@@ -10,7 +13,7 @@ class Exon(GenomeElement):
                  start: int, 
                  end: int, 
                  strand: str, 
-                 transcript: Transcript, 
+                 transcript: "Transcript", 
                  **kwargs):
         locus = Locus(transcript.chromosome_id, start, end, strand)
         super().__init__(id, locus, transcript, **kwargs)

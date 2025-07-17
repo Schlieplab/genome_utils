@@ -23,10 +23,10 @@ class Genome:
             name: The name of the genome.
             kwargs: Additional keyword arguments.
         """
+        self._attributes: Dict[str, Any] = kwargs
         self.id = id
         self.species = species
         self.name = name
-        self._attributes: Dict[str, Any] = kwargs
         self.chromosomes: Dict[str, Chromosome] = {}
 
         self._genes_by_id: Dict[str, Gene] = {}
