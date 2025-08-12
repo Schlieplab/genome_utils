@@ -4,7 +4,7 @@ from typing import Literal
 
 @dataclass(frozen=True, order=True)
 class Locus:
-    """Represents a locus on a chromosome."""
+    """Represents a 1-based genomic coordinates on a chromosome."""
     chromosome_id: str
     start: int
     end: int

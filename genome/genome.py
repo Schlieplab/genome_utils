@@ -1,13 +1,15 @@
 from __future__ import annotations
-from typing import Dict, Iterator, Any
+from typing import Dict, Iterator, Any, List
 
 from Bio import SeqIO
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from .chromosome import Chromosome
 from .gene import Gene
 from .transcript import Transcript
 from .exon import Exon
+from .locus import Locus
 
 
 class Genome:
@@ -28,7 +30,6 @@ class Genome:
         self.species = species
         self.name = name
         self.chromosomes: Dict[str, Chromosome] = {}
-
         self._genes_by_id: Dict[str, Gene] = {}
         self._transcripts_by_id: Dict[str, Transcript] = {}
         self._exons_by_id: Dict[str, Exon] = {}
@@ -67,9 +68,17 @@ class Genome:
         if not self._is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         return self.chromosomes[key]
+    
+    def get_sequence(self, locus: Locus) -> Seq:
+        """Get a sequence by its locus."""
+        if not self._is_indexed:
+            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
+        
+        return self.chromosomes[locus.chromosome_id].get_subsequence(locus.start, 
+                                                                     locus.end, 
+                                                                     locus.strand)
 
-    @property
-    def genes(self) -> Iterator[Gene]:
+    def genes_iter(self) -> Iterator[Gene]:
         """Iterate over all genes in the genome."""
         if not self._is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
@@ -77,9 +86,13 @@ class Genome:
             for gene in chrom.genes:
                 yield gene
 
-
     @property
-    def transcripts(self) -> Iterator[Transcript]:
+    def genes(self) -> List[Gene]:
+        """Get all genes in the genome."""
+        return list(self.genes_iter())
+
+
+    def transcripts_iter(self) -> Iterator[Transcript]:
         """Iterate over all transcripts in the genome."""
         if not self._is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
@@ -87,9 +100,13 @@ class Genome:
             for gene in chrom.genes: # Access genes from chromosome, then transcripts from gene
                 for transcript in gene.transcripts:
                     yield transcript
-
+    
     @property
-    def exons(self) -> Iterator[Exon]:
+    def transcripts(self) -> List[Transcript]:
+        """Get all transcripts in the genome."""
+        return list(self.transcripts_iter())
+
+    def exons_iter(self) -> Iterator[Exon]:
         """Iterate over all exons in the genome."""
         if not self._is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
@@ -98,6 +115,12 @@ class Genome:
                 for transcript in gene.transcripts:
                     for exon in transcript.exons:
                         yield exon
+
+    @property
+    def exons(self) -> List[Exon]:
+        """Get all exons in the genome."""
+        return list(self.exons_iter())
+
 
     def chromosome_by_id(self, chromosome_id: str) -> Chromosome:
         """Get a chromosome by its ID using the index. Raises ValueError if not found."""

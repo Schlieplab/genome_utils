@@ -22,3 +22,8 @@ class Exon(GenomeElement):
     def exon_id(self) -> str:
         """Returns the ID of the exon."""
         return self.id
+    
+    def get_transcript(self) -> "Transcript":
+        """Returns the transcript that the exon belongs to."""
+        return self._parent
+    

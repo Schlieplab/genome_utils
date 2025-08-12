@@ -1,7 +1,7 @@
 from .downloader import Downloader
-from .genome_downloader import GenomeDownloader
+from .genome_downloader import GgetEnsemblGenomeDownloader
 
 __all__ = [
     "Downloader",
-    "GenomeDownloader",
+    "GgetEnsemblGenomeDownloader",
 ] 

@@ -6,17 +6,25 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import gffutils
 import logging
-
+import gzip
+import shutil
+from io import StringIO
+import time
 from .genome import Genome
 from .chromosome import Chromosome
 from .gene import Gene
 from .transcript import Transcript
 from .exon import Exon
-
+from .locus import Locus
 
 class BuilderStateError(Exception):
     """Custom exception for GenomeBuilder state errors."""
     pass
+
+
+def _strip_version(seq_id: str) -> str:
+    """Removes version numbers from a sequence ID (e.g., 'NC_000001.11' -> 'NC_000001')."""
+    return seq_id.split('.')[0]
 
 
 class GenomeBuilder:
@@ -60,36 +68,65 @@ class GenomeBuilder:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def with_dna_fasta(self, dna_fasta_path: Path) -> GenomeBuilder:
+    def with_dna_fasta(self, dna_fasta_path: Path) -> "GenomeBuilder":
         """
         Loads chromosome sequences from a genomic DNA FASTA file.
         This must be the first step in the build process.
         """
         if self._genome.chromosomes:
             raise BuilderStateError("with_dna_fasta() has already been called.")
-        
+
         self.logger.info(f"Loading DNA sequences from {dna_fasta_path}...")
-        dna_records = SeqIO.index(str(dna_fasta_path), "fasta")
+
+        dna_file_to_use = dna_fasta_path
+
+        if str(dna_fasta_path).endswith('.gz'):
+            extracted_path = dna_fasta_path.with_suffix('')
+            if extracted_path.exists():
+                self.logger.info(f"Using existing extracted DNA FASTA file: {extracted_path}")
+                dna_file_to_use = extracted_path
+            else:
+                self.logger.info(f"Extracting gzipped DNA FASTA to: {extracted_path}")
+                with gzip.open(dna_fasta_path, 'rt') as gz_in:
+                    with open(extracted_path, 'w') as f_out:
+                        shutil.copyfileobj(gz_in, f_out)
+                dna_file_to_use = extracted_path
+
+        dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
+        
         for seq_id in dna_records:
-            chromosome = Chromosome(seq_record=dna_records[seq_id])
+            chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records)
             self._genome.add_chromosome(chromosome)
+
         self.logger.info(f"Loaded {len(self._genome.chromosomes)} chromosomes.")
         return self
 
-    def with_cdna_fasta(self, cdna_fasta_path: Path) -> GenomeBuilder:
+    def with_cdna_fasta(self, cdna_fasta_path: Path) -> "GenomeBuilder":
         """
         Loads transcript sequences from a cDNA FASTA file.
-        This is an optional step.
         """
         if self._cdna_records:
             raise BuilderStateError("with_cdna_fasta() has already been called.")
         
         self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}...")
-        self._cdna_records = SeqIO.to_dict(SeqIO.parse(cdna_fasta_path, "fasta"))
+        
+        def parse_cdna():
+            for record in SeqIO.parse(handle, "fasta"):
+                record.id = _strip_version(record.id)
+                yield record
+
+        if str(cdna_fasta_path).endswith('.gz'):
+            self.logger.info(f"Reading gzipped cDNA FASTA file: {cdna_fasta_path}")
+            with gzip.open(cdna_fasta_path, "rt") as handle:
+                self._cdna_records = SeqIO.to_dict(parse_cdna())
+        else:
+            with open(cdna_fasta_path, "rt") as handle:
+                self._cdna_records = SeqIO.to_dict(parse_cdna())
+
         self.logger.info(f"Loaded {len(self._cdna_records)} cDNA sequences.")
         return self
 
-    def with_gtf_file(self, gtf_path: Path) -> GenomeBuilder:
+    def with_gtf_file(self, gtf_path: Path) -> "GenomeBuilder":
         """
         Parses a GTF file to build the gene-transcript-exon hierarchy.
         `with_dna_fasta()` must be called before this method.
@@ -99,13 +136,53 @@ class GenomeBuilder:
         if self._genes_map:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
-        self.logger.info(f"Parsing GTF file from {gtf_path}...")
-        db = gffutils.create_db(str(gtf_path), dbfn=':memory:', force=True, keep_order=True,
-                                merge_strategy='error', id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'})
+        self.logger.info(f"Processing annotations from {gtf_path}...")
 
+        gtf_db_path = gtf_path.with_suffix('.db')
+
+        if gtf_db_path.exists():
+            self.logger.info(f"Loading existing gffutils database: {gtf_db_path}")
+            db = gffutils.FeatureDB(str(gtf_db_path))
+        else:
+            self.logger.info(f"Database not found. Creating new database at: {gtf_db_path}")
+            gtf_file_to_use = gtf_path
+            
+            if str(gtf_path).endswith('.gz'):
+                extracted_path = gtf_path.with_suffix('')
+                
+                if extracted_path.exists():
+                    self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
+                    gtf_file_to_use = extracted_path
+                else:
+                    self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
+                    with gzip.open(gtf_path, 'rt') as gz_file:
+                        with open(extracted_path, 'w') as out_file:
+                            out_file.write(gz_file.read())
+                    gtf_file_to_use = extracted_path
+            
+            db = gffutils.create_db(
+                    str(gtf_file_to_use),
+                    dbfn=str(gtf_db_path),
+                    keep_order=False,
+                    merge_strategy='error',
+                    id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'},
+                    disable_infer_genes=True,
+                    disable_infer_transcripts=True
+            )
+
+        logging.info(f"GTF database created at: {gtf_db_path}")
+        
+        start_time = time.time()
         self._create_genes(db)
+        self.logger.info(f"Created genes in {time.time() - start_time:.2f} seconds")
+
+        start_time = time.time()
         self._create_transcripts(db)
+        self.logger.info(f"Created transcripts in {time.time() - start_time:.2f} seconds")
+
+        start_time = time.time()
         self._create_exons(db)
+        self.logger.info(f"Created exons in {time.time() - start_time:.2f} seconds")
 
         self.logger.info(f"Successfully parsed and linked {len(self._genes_map)} genes, "
                          f"{len(self._transcripts_map)} transcripts.")
@@ -126,6 +203,7 @@ class GenomeBuilder:
                 self._genes_map[g.id] = gene
             except KeyError:
                 self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found in FASTA. Skipping gene.")
+                raise KeyError(f"Chromosome '{g.chrom}' for gene '{g.id}' not found in FASTA. Skipping gene.")
 
     def _create_transcripts(self, db: gffutils.FeatureDB):
         """Creates Transcript objects and links them to genes."""
@@ -135,7 +213,7 @@ class GenomeBuilder:
             attributes.pop('transcript_id', None)  # Already used for id
             if gene_id and gene_id in self._genes_map:
                 gene = self._genes_map[gene_id]
-                sequence = self._cdna_records.get(t.id, SeqRecord(Seq(""))).seq
+                sequence = str(self._cdna_records.pop(t.id, SeqRecord(Seq(""))).seq)
                 transcript = Transcript(id=t.id, start=t.start, end=t.end, strand=t.strand,
                                         sequence=sequence, gene=gene, **attributes)
                 gene.add_transcript(transcript)
@@ -168,4 +246,17 @@ class GenomeBuilder:
         self.logger.info("Indexing genome for fast lookups...")
         self._genome.index()
         self.logger.info("Genome construction complete.")
-        return self._genome 
+        
+        self._offload_memory()
+        
+        return self._genome
+
+    def _offload_memory(self):
+        """Clears large data structures from memory after the build is complete."""
+        self.logger.info("Offloading builder memory...")
+        self._cdna_records.clear()
+        self._genes_map.clear()
+        self._transcripts_map.clear()
+        
+        
+        self.logger.info("Memory offload complete.") 
