@@ -155,4 +155,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+
 test_genome_utils.ipynb
+test_genome_utils.py
+run_pipeline.sh
+example.py
