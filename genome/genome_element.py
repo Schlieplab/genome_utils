@@ -1,15 +1,19 @@
 from __future__ import annotations
 from abc import ABC
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, TYPE_CHECKING
 
 from .locus import Locus
 
+if TYPE_CHECKING:
+    from .genome import Genome
 
 class GenomeElement(ABC):
     """Abstract base class for genomic elements."""
 
     def __init__(self, id: str, locus: Locus,
-                 parent: Optional[GenomeElement] = None, **kwargs):
+                 parent: Optional[GenomeElement] = None,
+                 genome: "Genome" = None,
+                 **kwargs):
         self._attributes: Dict[str, Any] = {
             key: value[0] if isinstance(value, list) and len(value) == 1 else value
             for key, value in kwargs.items()
@@ -18,6 +22,7 @@ class GenomeElement(ABC):
         self.locus = locus
         self._parent = parent
         self._children: List[GenomeElement] = []
+        self._genome: "Genome" = genome
     
     
     @property

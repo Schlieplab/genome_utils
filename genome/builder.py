@@ -10,6 +10,7 @@ import gzip
 import shutil
 from io import StringIO
 import time
+import pickle
 from .genome import Genome
 from .chromosome import Chromosome
 from .gene import Gene
@@ -54,7 +55,8 @@ class GenomeBuilder:
 
     def __init__(self, id: str, species: str, name: str, 
                  main_chromosomes: Optional[list[str]] = None, 
-                 separate_scaffolds: bool = False, **kwargs):
+                 separate_scaffolds: bool = False, 
+                 output_dir: Path = Path('./data'), **kwargs):
         """
         Initializes the GenomeBuilder.
 
@@ -66,6 +68,8 @@ class GenomeBuilder:
                               If None, defaults to human standard chromosomes (1-22, X, Y, M, MT).
             separate_scaffolds: If True, separates scaffold chromosomes into a second Genome object.
                                 The `build()` method will then return a tuple: (main_genome, scaffold_genome).
+            output_dir: The directory to save the pickled genome file. 
+                        If None, defaults to ./data
             kwargs: Additional attributes for the Genome object.
         """
         self._genome = Genome(id, species, name, **kwargs)
@@ -75,7 +79,8 @@ class GenomeBuilder:
         self._chromosome_filter = None
         self._separate_scaffolds = separate_scaffolds
         self._scaffold_genome: Optional[Genome] = None
-        
+        self._output_dir = output_dir
+
         if main_chromosomes is None:
             # Default to standard human chromosomes
             standard_set = {str(i) for i in range(1, 23)} | {'X', 'Y', 'M', 'MT'}
@@ -135,7 +140,7 @@ class GenomeBuilder:
             if self._chromosome_filter and seq_id not in self._chromosome_filter:
                 continue
             
-            chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records)
+            chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records, fasta_path=dna_file_to_use, genome=self._genome)
 
             if self._separate_scaffolds and seq_id not in self._main_chromosomes:
                 if self._scaffold_genome:
@@ -263,6 +268,7 @@ class GenomeBuilder:
                 
                 gene = Gene(id=gene_id, name=gene_name, start=g.start,
                             end=g.end, strand=g.strand, chromosome=chromosome,
+                            genome=self._genome,
                             **attributes)
                 chromosome.add_gene(gene)
                 self._genes_map[g.id] = gene
@@ -286,7 +292,7 @@ class GenomeBuilder:
                 gene = self._genes_map[gene_id]
                 sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
                 transcript = Transcript(id=transcript_id, start=t.start, end=t.end, strand=t.strand,
-                                        sequence=sequence, gene=gene, **attributes)
+                                        sequence=sequence, gene=gene, genome=self._genome, **attributes)
                 gene.add_transcript(transcript)
                 self._transcripts_map[t.id] = transcript
             else:
@@ -309,14 +315,18 @@ class GenomeBuilder:
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
                 exon = Exon(id=exon_id, start=e.start, end=e.end, strand=e.strand, transcript=transcript,
+                            genome=self._genome,
                             **attributes)
                 transcript.add_exon(exon)
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e.id}' not found. Skipping exon.")
 
-    def build(self) -> Genome:
+    def build(self, pickle_genome: bool = False) -> Genome | tuple[Genome, Genome]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
+        
+        Args:
+            pickle_genome: If True, saves the final genome object(s) to a pickle file.
         """
         if not self._genes_map:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
@@ -331,7 +341,19 @@ class GenomeBuilder:
         self.logger.info("Genome construction complete.")
         
         self._offload_memory()
-        
+
+        if pickle_genome:
+            output_path = self._output_dir / f"{self._genome.species}.{self._genome.id}.pkl"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Saving genome to {output_path}...")
+            if self._scaffold_genome:
+                with open(output_path, "wb") as f:
+                    pickle.dump((self._genome, self._scaffold_genome), f)
+            else:
+                with open(output_path, "wb") as f:
+                    pickle.dump(self._genome, f)
+            self.logger.info("Genome saved successfully.")
+
         if self._scaffold_genome:
             return self._genome, self._scaffold_genome
         
@@ -345,4 +367,18 @@ class GenomeBuilder:
         self._transcripts_map.clear()
         
         
-        self.logger.info("Memory offload complete.") 
+        self.logger.info("Memory offload complete.")
+        
+    @staticmethod
+    def load_from_file(file_path: Path) -> Genome | tuple[Genome, Genome]:
+        """
+        Loads a Genome object (or a tuple of Genome objects) from a pickle file.
+
+        Args:
+            file_path: The path to the pickle file.
+
+        Returns:
+            The loaded Genome object or a tuple of (main_genome, scaffold_genome).
+        """
+        with open(file_path, "rb") as f:
+            return pickle.load(f) 

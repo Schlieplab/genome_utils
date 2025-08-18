@@ -7,7 +7,7 @@ from .locus import Locus
 if TYPE_CHECKING:
     from .exon import Exon
     from .gene import Gene
-
+    from .genome import Genome
 
 class Transcript(GenomeElement):
     """Represents a transcript."""
@@ -19,6 +19,7 @@ class Transcript(GenomeElement):
                  strand: str, 
                  sequence: Seq,
                  gene: "Gene", 
+                 genome: "Genome",
                  **kwargs):
         """
         Initializes a Transcript object.
@@ -33,7 +34,7 @@ class Transcript(GenomeElement):
             kwargs: Additional keyword arguments.
         """
         locus = Locus(gene.chromosome_id, start, end, strand)
-        super().__init__(id, locus, gene, **kwargs)
+        super().__init__(id, locus, gene, genome, **kwargs)
         self._sequence = sequence
     @property
     def exons(self) -> List["Exon"]:
@@ -44,6 +45,7 @@ class Transcript(GenomeElement):
         """Add an exon to the transcript."""
         exon._parent = self
         self._children.append(exon) 
+        self._genome.is_indexed = False
     
     def __len__(self) -> int:
         return len(self.sequence)
@@ -138,4 +140,11 @@ class Transcript(GenomeElement):
         
         return Locus(self.chromosome_id, final_start, final_end, self.strand)
     
-    
+    def genomic_to_transcript_pos(self, genomic_position: int) -> int:
+        """
+        Converts a genomic position to a transcript position.
+        """
+        for exon in self.exons:
+            if exon.start <= genomic_position <= exon.end:
+                return genomic_position - exon.start + 1
+        raise ValueError(f"Genomic position {genomic_position} is out of bounds for transcript {self.id}.")

@@ -25,15 +25,18 @@ class Genome:
             name: The name of the genome.
             kwargs: Additional keyword arguments.
         """
-        self._attributes: Dict[str, Any] = kwargs
+        self._attributes: Dict[str, Any] = {
+            key: value[0] if isinstance(value, list) and len(value) == 1 else value
+            for key, value in kwargs.items()
+        }
         self.id = id
         self.species = species
         self.name = name
-        self.chromosomes: Dict[str, Chromosome] = {}
-        self._genes_by_id: Dict[str, Gene] = {}
-        self._transcripts_by_id: Dict[str, Transcript] = {}
-        self._exons_by_id: Dict[str, Exon] = {}
-        self._is_indexed: bool = False
+        self._chromosomes: Dict[str, Chromosome] = {}
+        self._genes: Dict[str, Gene] = {}
+        self._transcripts: Dict[str, Transcript] = {}
+        self._exons: Dict[str, Exon] = {}
+        self.is_indexed: bool = False
 
 
     def __repr__(self) -> str:
@@ -45,44 +48,51 @@ class Genome:
 
     def add_chromosome(self, chromosome: Chromosome):
         """Add a chromosome to the genome."""
-        if chromosome.id in self.chromosomes:
+        if chromosome.id in self._chromosomes:
             raise ValueError(f"Chromosome with ID '{chromosome.id}' already exists.")
-        self.chromosomes[chromosome.id] = chromosome
+        self._chromosomes[chromosome.id] = chromosome
+        self.is_indexed = False
 
     def index(self):
         """
         Creates an index of all genes, transcripts, and exons for fast lookup.
-        This method should be called after all genomic features have been added.
+        This method MUST be called after all genomic features have been added.
         """
-        for chrom in self.chromosomes.values():
+        for chrom in self._chromosomes.values():
             for gene in chrom.genes:
-                self._genes_by_id[gene.id] = gene
+                self._genes[gene.id] = gene
                 for transcript in gene.transcripts:
-                    self._transcripts_by_id[transcript.id] = transcript
+                    self._transcripts[transcript.id] = transcript
                     for exon in transcript.exons:
-                        self._exons_by_id[exon.id] = exon
-        self._is_indexed = True
-
-    def __getitem__(self, key: str) -> Chromosome:
-        """Get a chromosome by its ID."""
-        if not self._is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        return self.chromosomes[key]
+                        self._exons[exon.id] = exon
+        self.is_indexed = True
     
-    def get_sequence(self, locus: Locus) -> Seq:
+    def sequence_by_locus(self, locus: Locus) -> Seq:
         """Get a sequence by its locus."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         
-        return self.chromosomes[locus.chromosome_id].get_subsequence(locus.start, 
+        return self._chromosomes[locus.chromosome_id].get_subsequence(locus.start, 
                                                                      locus.end, 
                                                                      locus.strand)
 
+    def chromosomes_iter(self) -> Iterator[Chromosome]:
+        """Iterate over all chromosomes in the genome."""
+        if not self.is_indexed:
+            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
+        for chrom in self._chromosomes.values():
+            yield chrom
+
+    @property
+    def chromosomes(self) -> List[Chromosome]:
+        """Get all chromosomes in the genome."""
+        return list(self.chromosomes_iter())
+
     def genes_iter(self) -> Iterator[Gene]:
         """Iterate over all genes in the genome."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self.chromosomes.values():
+        for chrom in self._chromosomes.values():
             for gene in chrom.genes:
                 yield gene
 
@@ -94,9 +104,9 @@ class Genome:
 
     def transcripts_iter(self) -> Iterator[Transcript]:
         """Iterate over all transcripts in the genome."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self.chromosomes.values():
+        for chrom in self._chromosomes.values():
             for gene in chrom.genes: # Access genes from chromosome, then transcripts from gene
                 for transcript in gene.transcripts:
                     yield transcript
@@ -108,9 +118,9 @@ class Genome:
 
     def exons_iter(self) -> Iterator[Exon]:
         """Iterate over all exons in the genome."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self.chromosomes.values():
+        for chrom in self._chromosomes.values():
             for gene in chrom.genes:
                 for transcript in gene.transcripts:
                     for exon in transcript.exons:
@@ -125,43 +135,37 @@ class Genome:
     def chromosome_by_id(self, chromosome_id: str) -> Chromosome:
         """Get a chromosome by its ID using the index. Raises ValueError if not found."""
         try:
-            return self[chromosome_id]
+            return self._chromosomes[chromosome_id]
         except KeyError:
             raise ValueError(f"Chromosome with ID '{chromosome_id}' not found.")
 
     def gene_by_id(self, gene_id: str) -> Gene:
         """Get a gene by its ID using the index. Raises ValueError if not found."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         try:
-            return self._genes_by_id[gene_id]
+            return self._genes[gene_id]
         except KeyError:
             raise ValueError(f"Gene with ID '{gene_id}' not found.")
 
     def transcript_by_id(self, transcript_id: str) -> Transcript:
         """Get a transcript by its ID using the index. Raises ValueError if not found."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         try:
-            return self._transcripts_by_id[transcript_id]
+            return self._transcripts[transcript_id]
         except KeyError:
             raise ValueError(f"Transcript with ID '{transcript_id}' not found.")
 
     def exon_by_id(self, exon_id: str) -> Exon:
         """Get an exon by its ID using the index. Raises ValueError if not found."""
-        if not self._is_indexed:
+        if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         try:
-            return self._exons_by_id[exon_id]
+            return self._exons[exon_id]
         except KeyError:
             raise ValueError(f"Exon with ID '{exon_id}' not found.")
 
-
-    def __iter__(self) -> Iterator[Chromosome]:
-        """Iterate over all chromosomes in the genome."""
-        if not self._is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        return iter(self.chromosomes.values())
 
     def __getattr__(self, name: str) -> Any:
         """Allow direct access to attributes in the attributes dictionary."""

@@ -10,7 +10,7 @@ import logging
 if TYPE_CHECKING:
     from .chromosome import Chromosome
     from .transcript import Transcript
-
+    from .genome import Genome
 
 class Gene(GenomeElement):
     """Represents a gene."""
@@ -22,6 +22,7 @@ class Gene(GenomeElement):
                  end: int, 
                  strand: str, 
                  chromosome: "Chromosome", 
+                 genome: "Genome",
                  **kwargs):
         """
         Initializes a Gene object.
@@ -36,7 +37,7 @@ class Gene(GenomeElement):
             kwargs: Additional keyword arguments.
         """
         locus = Locus(chromosome.chromosome_id, start, end, strand)
-        super().__init__(id, locus, chromosome, **kwargs)
+        super().__init__(id, locus, chromosome, genome, **kwargs)
         self.name = name
 
 
@@ -49,6 +50,7 @@ class Gene(GenomeElement):
         """Add a transcript to the gene."""
         transcript._parent = self
         self._children.append(transcript)
+        self._genome.is_indexed = False
     
     def get_chromosome(self) -> "Chromosome":
         """Returns the chromosome that this gene is on."""
