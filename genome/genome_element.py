@@ -10,7 +10,10 @@ class GenomeElement(ABC):
 
     def __init__(self, id: str, locus: Locus,
                  parent: Optional[GenomeElement] = None, **kwargs):
-        self._attributes: Dict[str, Any] = kwargs
+        self._attributes: Dict[str, Any] = {
+            key: value[0] if isinstance(value, list) and len(value) == 1 else value
+            for key, value in kwargs.items()
+        }
         self.id = id
         self.locus = locus
         self._parent = parent
@@ -48,7 +51,11 @@ class GenomeElement(ABC):
         if name in self.__dict__ or name in self.__class__.__dict__ or name == '_attributes' or not hasattr(self, '_attributes'):
             super().__setattr__(name, value)
         else:
-            self._attributes[name] = value
+            # Unpack single-item lists to save memory.
+            if isinstance(value, list) and len(value) == 1:
+                self._attributes[name] = value[0]
+            else:
+                self._attributes[name] = value
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(id='{self.id}', locus={self.locus!r})"

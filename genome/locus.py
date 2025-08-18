@@ -20,7 +20,7 @@ class Locus:
         return self.end - self.start + 1
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.chromosome_id}:{self.start}-{self.end} {self.strand})"
+        return f"{self.__class__.__name__}({self.chromosome_id}:{self.start}-{self.end}, strand={self.strand})"
 
     def overlaps(self, other: Locus) -> bool:
         """Check if this locus overlaps with another."""

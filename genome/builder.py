@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -24,7 +24,8 @@ class BuilderStateError(Exception):
 
 def _strip_version(seq_id: str) -> str:
     """Removes version numbers from a sequence ID (e.g., 'NC_000001.11' -> 'NC_000001')."""
-    return seq_id.split('.')[0]
+    seq_id_parts = seq_id.split('.')
+    return seq_id_parts[0], seq_id_parts[1] if len(seq_id_parts) > 1 else None
 
 
 class GenomeBuilder:
@@ -51,7 +52,9 @@ class GenomeBuilder:
         )
     """
 
-    def __init__(self, id: str, species: str, name: str, **kwargs):
+    def __init__(self, id: str, species: str, name: str, 
+                 main_chromosomes: Optional[list[str]] = None, 
+                 separate_scaffolds: bool = False, **kwargs):
         """
         Initializes the GenomeBuilder.
 
@@ -59,14 +62,48 @@ class GenomeBuilder:
             id: The ID of the genome.
             species: The species of the genome.
             name: The name of the genome.
+            main_chromosomes: A list of chromosome IDs to be considered as the main set.
+                              If None, defaults to human standard chromosomes (1-22, X, Y, M, MT).
+            separate_scaffolds: If True, separates scaffold chromosomes into a second Genome object.
+                                The `build()` method will then return a tuple: (main_genome, scaffold_genome).
             kwargs: Additional attributes for the Genome object.
         """
         self._genome = Genome(id, species, name, **kwargs)
         self._cdna_records: Dict[str, SeqRecord] = {}
         self._genes_map: Dict[str, Gene] = {}
         self._transcripts_map: Dict[str, Transcript] = {}
+        self._chromosome_filter = None
+        self._separate_scaffolds = separate_scaffolds
+        self._scaffold_genome: Optional[Genome] = None
+        
+        if main_chromosomes is None:
+            # Default to standard human chromosomes
+            standard_set = {str(i) for i in range(1, 23)} | {'X', 'Y', 'M', 'MT'}
+            self._main_chromosomes = standard_set.union({f'chr{c}' for c in standard_set})
+        else:
+            self._main_chromosomes = set(main_chromosomes)
+
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        if self._separate_scaffolds:
+            self.logger.info("Scaffold separation enabled. `build()` will return (main_genome, scaffold_genome).")
+            self._scaffold_genome = Genome(
+                id=f"{id}_scaffolds",
+                species=species,
+                name=f"{name} (Scaffolds)",
+                **kwargs
+            )
+
+    def set_chromosome_filter(self, chromosomes: list[str]) -> "GenomeBuilder":
+        """
+        Set a filter to only include specified chromosomes.
+        """
+        if self._genome.chromosomes:
+            raise BuilderStateError("Cannot set chromosome filter after with_dna_fasta() has been called.")
+        self._chromosome_filter = set(chromosomes)
+        self.logger.info(f"Chromosome filter set to: {self._chromosome_filter}")
+        return self
 
     def with_dna_fasta(self, dna_fasta_path: Path) -> "GenomeBuilder":
         """
@@ -95,10 +132,20 @@ class GenomeBuilder:
         dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
         
         for seq_id in dna_records:
+            if self._chromosome_filter and seq_id not in self._chromosome_filter:
+                continue
+            
             chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records)
-            self._genome.add_chromosome(chromosome)
 
-        self.logger.info(f"Loaded {len(self._genome.chromosomes)} chromosomes.")
+            if self._separate_scaffolds and seq_id not in self._main_chromosomes:
+                if self._scaffold_genome:
+                    self._scaffold_genome.add_chromosome(chromosome)
+            else:
+                self._genome.add_chromosome(chromosome)
+
+        self.logger.info(f"Loaded {len(self._genome.chromosomes)} main chromosomes.")
+        if self._scaffold_genome:
+            self.logger.info(f"Loaded {len(self._scaffold_genome.chromosomes)} scaffold chromosomes.")
         return self
 
     def with_cdna_fasta(self, cdna_fasta_path: Path) -> "GenomeBuilder":
@@ -191,16 +238,35 @@ class GenomeBuilder:
     def _create_genes(self, db: gffutils.FeatureDB):
         """Creates Gene objects from the GTF database."""
         for g in db.features_of_type('gene'):
+            if self._chromosome_filter and g.chrom not in self._chromosome_filter:
+                continue
+
+            chromosome = self._genome.chromosomes.get(g.chrom)
+            if not chromosome and self._scaffold_genome:
+                chromosome = self._scaffold_genome.chromosomes.get(g.chrom)
+
+            if not chromosome:
+                self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
+                continue
+
             try:
-                chromosome = self._genome.chromosomes[g.chrom]
                 attributes = dict(g.attributes)
-                gene_name = attributes.pop('gene_name', [g.id])[0]
-                attributes.pop('gene_id', None)  # Already used for id
-                gene = Gene(id=g.id, name=gene_name, start=g.start,
+
+                gene_names = attributes.pop('gene_name', attributes.pop('gene', [g.id]))
+                gene_name = gene_names.pop(0) if isinstance(gene_names, list) else gene_names
+                attributes['gene_synonyms'] = gene_names
+
+                # Remove exon and transcript related attributes
+                attributes = {k: v for k, v in attributes.items() 
+                            if not (k.startswith('exon') or k.startswith('transcript'))}
+                gene_id = attributes.pop('gene_id', [g.id])[0]
+                
+                gene = Gene(id=gene_id, name=gene_name, start=g.start,
                             end=g.end, strand=g.strand, chromosome=chromosome,
                             **attributes)
                 chromosome.add_gene(gene)
                 self._genes_map[g.id] = gene
+
             except KeyError:
                 self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found in FASTA. Skipping gene.")
                 raise KeyError(f"Chromosome '{g.chrom}' for gene '{g.id}' not found in FASTA. Skipping gene.")
@@ -209,12 +275,17 @@ class GenomeBuilder:
         """Creates Transcript objects and links them to genes."""
         for t in db.features_of_type('transcript'):
             attributes = dict(t.attributes)
-            gene_id = attributes.pop('gene_id', [None])[0]
-            attributes.pop('transcript_id', None)  # Already used for id
+
+            gene_id = attributes.pop('gene_id', attributes.pop('gene', [None]))[0]
+            transcript_id = attributes.pop('transcript_id', [t.id])[0]  
+            # Remove exon and gene related attributes
+            attributes = {k: v for k, v in attributes.items() 
+                            if not (k.startswith('exon') or k.startswith('gene'))}
+            
             if gene_id and gene_id in self._genes_map:
                 gene = self._genes_map[gene_id]
-                sequence = str(self._cdna_records.pop(t.id, SeqRecord(Seq(""))).seq)
-                transcript = Transcript(id=t.id, start=t.start, end=t.end, strand=t.strand,
+                sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
+                transcript = Transcript(id=transcript_id, start=t.start, end=t.end, strand=t.strand,
                                         sequence=sequence, gene=gene, **attributes)
                 gene.add_transcript(transcript)
                 self._transcripts_map[t.id] = transcript
@@ -224,12 +295,20 @@ class GenomeBuilder:
     def _create_exons(self, db: gffutils.FeatureDB):
         """Creates Exon objects and links them to transcripts."""
         for e in db.features_of_type('exon'):
+            if self._chromosome_filter and e.chrom not in self._chromosome_filter:
+                continue
+
             attributes = dict(e.attributes)
+
             transcript_id = attributes.pop('transcript_id', [None])[0]
-            attributes.pop('gene_id', None)  # Redundant in exon context
+            exon_id = attributes.pop('exon_id', [e.id])[0]
+            # Remove transcript and gene related attributes
+            attributes = {k: v for k, v in attributes.items() 
+                            if not (k.startswith('transcript') or k.startswith('gene'))}
+            
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
-                exon = Exon(id=e.id, start=e.start, end=e.end, strand=e.strand, transcript=transcript,
+                exon = Exon(id=exon_id, start=e.start, end=e.end, strand=e.strand, transcript=transcript,
                             **attributes)
                 transcript.add_exon(exon)
             else:
@@ -245,9 +324,16 @@ class GenomeBuilder:
         
         self.logger.info("Indexing genome for fast lookups...")
         self._genome.index()
+        if self._scaffold_genome:
+            self.logger.info("Indexing scaffold genome for fast lookups...")
+            self._scaffold_genome.index()
+
         self.logger.info("Genome construction complete.")
         
         self._offload_memory()
+        
+        if self._scaffold_genome:
+            return self._genome, self._scaffold_genome
         
         return self._genome
 

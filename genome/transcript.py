@@ -17,7 +17,7 @@ class Transcript(GenomeElement):
                  start: int, 
                  end: int, 
                  strand: str, 
-                 sequence: str,
+                 sequence: Seq,
                  gene: "Gene", 
                  **kwargs):
         """
@@ -34,7 +34,7 @@ class Transcript(GenomeElement):
         """
         locus = Locus(gene.chromosome_id, start, end, strand)
         super().__init__(id, locus, gene, **kwargs)
-        self._sequence = sequence.encode()
+        self._sequence = sequence
     @property
     def exons(self) -> List["Exon"]:
         """Returns the list of exons (children) for this transcript."""
@@ -53,9 +53,9 @@ class Transcript(GenomeElement):
         return self._parent
     
     @property
-    def sequence(self) -> str:
+    def sequence(self) -> Seq:
         """Returns the sequence of the transcript."""
-        return self._sequence.decode()
+        return str(self._sequence)
     
     @property
     def exon_intervals(self) -> List[Tuple[int, int]]:
