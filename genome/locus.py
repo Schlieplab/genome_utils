@@ -33,3 +33,6 @@ class Locus:
         if self.chromosome_id != other.chromosome_id:
             return False
         return self.start <= other.start and self.end >= other.end 
+    
+
+    

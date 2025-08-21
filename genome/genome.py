@@ -25,13 +25,17 @@ class Genome:
             name: The name of the genome.
             kwargs: Additional keyword arguments.
         """
-        self._attributes: Dict[str, Any] = {
-            key: value[0] if isinstance(value, list) and len(value) == 1 else value
-            for key, value in kwargs.items()
-        }
         self.id = id
         self.species = species
         self.name = name
+
+        for key, value in kwargs.items():
+            # Unpack single-item lists to save memory
+            if isinstance(value, list) and len(value) == 1:
+                setattr(self, key, value[0])
+            else:
+                setattr(self, key, value)
+        
         self._chromosomes: Dict[str, Chromosome] = {}
         self._genes: Dict[str, Gene] = {}
         self._transcripts: Dict[str, Transcript] = {}
@@ -72,64 +76,31 @@ class Genome:
         if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         
-        return self._chromosomes[locus.chromosome_id].get_subsequence(locus.start, 
-                                                                     locus.end, 
-                                                                     locus.strand)
+        return self._chromosomes[locus.chromosome_id].get_subsequence(locus)
 
-    def chromosomes_iter(self) -> Iterator[Chromosome]:
-        """Iterate over all chromosomes in the genome."""
-        if not self.is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self._chromosomes.values():
-            yield chrom
 
     @property
     def chromosomes(self) -> List[Chromosome]:
         """Get all chromosomes in the genome."""
-        return list(self.chromosomes_iter())
+        return list(self._chromosomes.values())
 
-    def genes_iter(self) -> Iterator[Gene]:
-        """Iterate over all genes in the genome."""
-        if not self.is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self._chromosomes.values():
-            for gene in chrom.genes:
-                yield gene
 
     @property
     def genes(self) -> List[Gene]:
         """Get all genes in the genome."""
-        return list(self.genes_iter())
+        return list(self._genes.values())
 
-
-    def transcripts_iter(self) -> Iterator[Transcript]:
-        """Iterate over all transcripts in the genome."""
-        if not self.is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self._chromosomes.values():
-            for gene in chrom.genes: # Access genes from chromosome, then transcripts from gene
-                for transcript in gene.transcripts:
-                    yield transcript
     
     @property
     def transcripts(self) -> List[Transcript]:
         """Get all transcripts in the genome."""
-        return list(self.transcripts_iter())
+        return list(self._transcripts.values())
 
-    def exons_iter(self) -> Iterator[Exon]:
-        """Iterate over all exons in the genome."""
-        if not self.is_indexed:
-            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
-        for chrom in self._chromosomes.values():
-            for gene in chrom.genes:
-                for transcript in gene.transcripts:
-                    for exon in transcript.exons:
-                        yield exon
 
     @property
     def exons(self) -> List[Exon]:
         """Get all exons in the genome."""
-        return list(self.exons_iter())
+        return list(self._exons.values())
 
 
     def chromosome_by_id(self, chromosome_id: str) -> Chromosome:
@@ -165,20 +136,5 @@ class Genome:
             return self._exons[exon_id]
         except KeyError:
             raise ValueError(f"Exon with ID '{exon_id}' not found.")
-
-
-    def __getattr__(self, name: str) -> Any:
-        """Allow direct access to attributes in the attributes dictionary."""
-        try:
-            return self._attributes[name]
-        except KeyError:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
         
-    def __setattr__(self, name: str, value: Any):
-        """Allow setting attributes. Explicitly defined attributes are set normally. New, dynamic attributes are stored in the 'attributes' dictionary."""
-        if name in self.__dict__ or name in self.__class__.__dict__ or name == '_attributes' or not hasattr(self, '_attributes'):
-            super().__setattr__(name, value)
-        else:
-            self._attributes[name] = value
-            
     

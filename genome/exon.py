@@ -20,10 +20,6 @@ class Exon(GenomeElement):
         locus = Locus(transcript.chromosome_id, start, end, strand)
         super().__init__(id, locus, transcript, genome, **kwargs)
 
-    @property
-    def exon_id(self) -> str:
-        """Returns the ID of the exon."""
-        return self.id
     
     def get_transcript(self) -> "Transcript":
         """Returns the transcript that the exon belongs to."""
@@ -32,7 +28,19 @@ class Exon(GenomeElement):
     @property
     def sequence(self) -> str:
         """Returns the sequence of the exon."""
-        transcript_start_pos = self.get_transcript().genomic_to_transcript_pos(self.start)
-        transcript_end_pos = self.get_transcript().genomic_to_transcript_pos(self.end)
-        return self.get_transcript().sequence[transcript_start_pos:transcript_end_pos]
+        transcript = self.get_transcript()
+        
+        # Find the start position of this exon within the transcript's spliced sequence
+        # by summing the lengths of all preceding exons.
+        try:
+            exon_index = transcript.exons.index(self)
+        except ValueError:
+            # This should not happen if the exon is properly associated with its transcript.
+            return "" 
+            
+        start_in_transcript = sum(len(exon) for exon in transcript.exons[:exon_index])
+        end_in_transcript = start_in_transcript + len(self)
+        
+        return transcript.sequence[start_in_transcript:end_in_transcript]
+    
     

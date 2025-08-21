@@ -66,7 +66,7 @@ class Gene(GenomeElement):
         """
         if self._parent is None:
             return None
-        return self.get_chromosome().get_subsequence(self.start, self.end, self.strand)
+        return self.get_chromosome().get_subsequence(self.locus)
 
     
 

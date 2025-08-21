@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING, Optional, Union
 from Bio.Seq import Seq
 from .genome_element import GenomeElement
 from .locus import Locus
@@ -42,11 +42,22 @@ class Transcript(GenomeElement):
         return self._children
 
     def add_exon(self, exon: "Exon"):
-        """Add an exon to the transcript."""
+        """Add an exon to the transcript in a sorted manner."""
         exon._parent = self
-        self._children.append(exon) 
+        
+        pos = 0
+        # For '+' strand, sort ascending by start coordinate.
+        # For '-' strand, sort descending by start coordinate (transcriptional order).
+        if self.strand == "+":
+            while pos < len(self._children) and self._children[pos].start < exon.start:
+                pos += 1
+        else:  # self.strand == "-"
+            while pos < len(self._children) and self._children[pos].start > exon.start:
+                pos += 1
+        self._children.insert(pos, exon)
+        
         self._genome.is_indexed = False
-    
+
     def __len__(self) -> int:
         return len(self.sequence)
     
@@ -55,96 +66,79 @@ class Transcript(GenomeElement):
         return self._parent
     
     @property
-    def sequence(self) -> Seq:
+    def sequence(self) -> str:
         """Returns the sequence of the transcript."""
         return str(self._sequence)
     
-    @property
     def exon_intervals(self) -> List[Tuple[int, int]]:
         """Get the exon intervals for this transcript."""
         return [(exon.start, exon.end) for exon in self.exons]
     
-    def get_locus_from_transcript_position(self, transcript_start_pos: int, transcript_end_pos: int = None) -> Locus:
+    def transcript_to_genomic_pos(self, start: int, end: Optional[int] = None) -> Union[Locus, List[Locus], None]:
         """
-        Converts a 1-based position or window within the transcript's spliced sequence 
-        to a genomic Locus.
-
-        Note: If the window spans an intron, this method returns a single Locus
-        that covers the entire genomic region from the start to the end, including
-        the intron.
+        Converts a 0-based, half-open transcript coordinate (or range) to a
+        1-based, inclusive genomic coordinate (or list of Locus objects).
 
         Args:
-            transcript_start_pos: The 1-based start position within the transcript's sequence.
-            transcript_end_pos: Optional 1-based end position for a window. If not provided,
-                                a single-base Locus is returned.
+            start: The 0-based start position on the transcript.
+            end: The optional 0-based end position on the transcript. If None, a single
+                 point is converted. If provided, the range is [start, end).
 
         Returns:
-            A Locus object representing the specific genomic coordinate or window.
-            
-        Raises:
-            ValueError: If the transcript has no exons or positions are out of bounds.
+            - A Locus object for a single point or for a range within a single exon.
+            - A list of Locus objects if the range spans multiple exons.
+            - None if a single point maps to no location; an empty list for a range.
         """
-        if transcript_end_pos is None:
-            transcript_end_pos = transcript_start_pos
+        is_single_point = end is None
+        if is_single_point:
+            end = start + 1
+
+        if not (0 <= start < end <= len(self)):
+            if is_single_point:
+                raise ValueError(f"Transcript position {start} is out of bounds.")
+            else:
+                raise ValueError(f"Transcript positions [{start}, {end}) are out of bounds.")
+
+        genomic_loci = []
+        transcript_pos = 0
         
-        if not self.exons:
-            raise ValueError("Transcript has no exons to map coordinates from.")
+        exons_in_order = self.exons
 
-        # Validate positions
-        if not (1 <= transcript_start_pos <= len(self)):
-            raise ValueError(f"Start position {transcript_start_pos} is out of bounds for transcript of length {len(self)}")
-        if not (1 <= transcript_end_pos <= len(self)):
-            raise ValueError(f"End position {transcript_end_pos} is out of bounds for transcript of length {len(self)}")
-        if transcript_start_pos > transcript_end_pos:
-            raise ValueError(f"Start position {transcript_start_pos} cannot be greater than end position {transcript_end_pos}.")
-
-        # Sort exons by genomic start position, reversing for negative strand
-        if self.strand == '+':
-            sorted_exons = sorted(self.exons, key=lambda e: e.start)
-        else:
-            sorted_exons = sorted(self.exons, key=lambda e: e.start, reverse=True)
-
-        # Find the genomic coordinates for the start and end of the window
-        genomic_start_coord = None
-        genomic_end_coord = None
-        
-        transcript_base_count = 0
-        for exon in sorted_exons:
+        for exon in exons_in_order:
             exon_len = len(exon)
             
-            # Check if the start of the window is in this exon
-            if genomic_start_coord is None and transcript_base_count + exon_len >= transcript_start_pos:
-                offset_in_exon = transcript_start_pos - transcript_base_count
-                if self.strand == '+':
-                    genomic_start_coord = exon.start + offset_in_exon - 1
-                else:
-                    genomic_start_coord = exon.end - offset_in_exon + 1
+            # Determine the overlap between the requested range [start, end)
+            # and this exon's range in transcript coordinates [transcript_pos, transcript_pos + exon_len)
+            overlap_start = max(start, transcript_pos)
+            overlap_end = min(end, transcript_pos + exon_len)
 
-            # Check if the end of the window is in this exon
-            if genomic_end_coord is None and transcript_base_count + exon_len >= transcript_end_pos:
-                offset_in_exon = transcript_end_pos - transcript_base_count
-                if self.strand == '+':
-                    genomic_end_coord = exon.start + offset_in_exon - 1
-                else:
-                    genomic_end_coord = exon.end - offset_in_exon + 1
-            
-            # If both are found, we can stop iterating
-            if genomic_start_coord is not None and genomic_end_coord is not None:
-                break
+            if overlap_start < overlap_end:
+                # This exon contains part of the requested range.
+                # Convert transcript-relative overlap coordinates to exon-relative coordinates.
+                start_in_exon = overlap_start - transcript_pos
+                end_in_exon = overlap_end - transcript_pos
                 
-            transcript_base_count += exon_len
+                # Convert exon-relative coordinates to 1-based genomic coordinates.
+                if self.strand == '+':
+                    genomic_start = exon.start + start_in_exon
+                    genomic_end = exon.start + end_in_exon - 1
+                else:  # Negative strand
+                    genomic_end = exon.end - start_in_exon
+                    genomic_start = exon.end - (end_in_exon - 1)
+                
+                genomic_loci.append(Locus(self.chromosome_id, genomic_start, genomic_end, self.strand))
+
+            transcript_pos += exon_len
+            
+            # Optimization: if we've covered the entire requested range, we can stop.
+            if transcript_pos >= end:
+                break
         
-        # Determine the final genomic start and end for the Locus
-        final_start = min(genomic_start_coord, genomic_end_coord)
-        final_end = max(genomic_start_coord, genomic_end_coord)
+        if not genomic_loci:
+            return None if is_single_point else []
+
+        if len(genomic_loci) == 1:
+            return genomic_loci[0]
         
-        return Locus(self.chromosome_id, final_start, final_end, self.strand)
-    
-    def genomic_to_transcript_pos(self, genomic_position: int) -> int:
-        """
-        Converts a genomic position to a transcript position.
-        """
-        for exon in self.exons:
-            if exon.start <= genomic_position <= exon.end:
-                return genomic_position - exon.start + 1
-        raise ValueError(f"Genomic position {genomic_position} is out of bounds for transcript {self.id}.")
+        return genomic_loci
+

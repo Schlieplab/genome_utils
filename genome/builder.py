@@ -26,7 +26,7 @@ class BuilderStateError(Exception):
 def _strip_version(seq_id: str) -> str:
     """Removes version numbers from a sequence ID (e.g., 'NC_000001.11' -> 'NC_000001')."""
     seq_id_parts = seq_id.split('.')
-    return seq_id_parts[0], seq_id_parts[1] if len(seq_id_parts) > 1 else None
+    return seq_id_parts[0] if len(seq_id_parts) > 1 else seq_id
 
 
 class GenomeBuilder:
@@ -140,7 +140,7 @@ class GenomeBuilder:
             if self._chromosome_filter and seq_id not in self._chromosome_filter:
                 continue
             
-            chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records, fasta_path=dna_file_to_use, genome=self._genome)
+            chromosome = Chromosome(seq_id, 1, len(dna_records[seq_id]), '+', dna_records, genome=self._genome)
 
             if self._separate_scaffolds and seq_id not in self._main_chromosomes:
                 if self._scaffold_genome:
@@ -162,18 +162,9 @@ class GenomeBuilder:
         
         self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}...")
         
-        def parse_cdna():
-            for record in SeqIO.parse(handle, "fasta"):
-                record.id = _strip_version(record.id)
-                yield record
-
-        if str(cdna_fasta_path).endswith('.gz'):
-            self.logger.info(f"Reading gzipped cDNA FASTA file: {cdna_fasta_path}")
-            with gzip.open(cdna_fasta_path, "rt") as handle:
-                self._cdna_records = SeqIO.to_dict(parse_cdna())
-        else:
-            with open(cdna_fasta_path, "rt") as handle:
-                self._cdna_records = SeqIO.to_dict(parse_cdna())
+        open_func = gzip.open if str(cdna_fasta_path).endswith('.gz') else open
+        with open_func(cdna_fasta_path, "rt") as handle:
+            self._cdna_records = SeqIO.to_dict(SeqIO.parse(handle, "fasta"), key_function=lambda x: _strip_version(x.id))
 
         self.logger.info(f"Loaded {len(self._cdna_records)} cDNA sequences.")
         return self
@@ -245,10 +236,14 @@ class GenomeBuilder:
         for g in db.features_of_type('gene'):
             if self._chromosome_filter and g.chrom not in self._chromosome_filter:
                 continue
-
-            chromosome = self._genome.chromosomes.get(g.chrom)
-            if not chromosome and self._scaffold_genome:
-                chromosome = self._scaffold_genome.chromosomes.get(g.chrom)
+            
+            try:
+                chromosome = self._genome.chromosome_by_id(g.chrom)
+            except ValueError:
+                if self._scaffold_genome:
+                    chromosome = self._scaffold_genome.chromosome_by_id(g.chrom)
+                else:
+                    raise ValueError(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
 
             if not chromosome:
                 self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
@@ -340,19 +335,19 @@ class GenomeBuilder:
 
         self.logger.info("Genome construction complete.")
         
-        self._offload_memory()
+        # self._offload_memory()
 
-        if pickle_genome:
-            output_path = self._output_dir / f"{self._genome.species}.{self._genome.id}.pkl"
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            self.logger.info(f"Saving genome to {output_path}...")
-            if self._scaffold_genome:
-                with open(output_path, "wb") as f:
-                    pickle.dump((self._genome, self._scaffold_genome), f)
-            else:
-                with open(output_path, "wb") as f:
-                    pickle.dump(self._genome, f)
-            self.logger.info("Genome saved successfully.")
+        # if pickle_genome:
+        #     output_path = self._output_dir / f"{self._genome.species}.{self._genome.id}.pkl"
+        #     output_path.parent.mkdir(parents=True, exist_ok=True)
+        #     self.logger.info(f"Saving genome to {output_path}...")
+        #     if self._scaffold_genome:
+        #         with open(output_path, "wb") as f:
+        #             pickle.dump((self._genome, self._scaffold_genome), f)
+        #     else:
+        #         with open(output_path, "wb") as f:
+        #             pickle.dump(self._genome, f)
+        #     self.logger.info("Genome saved successfully.")
 
         if self._scaffold_genome:
             return self._genome, self._scaffold_genome
