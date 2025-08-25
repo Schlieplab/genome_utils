@@ -11,8 +11,6 @@ import shutil
 from io import StringIO
 import time
 import pickle
-import json
-from tqdm import tqdm
 from .genome import Genome
 from .chromosome import Chromosome
 from .gene import Gene
@@ -175,13 +173,11 @@ class GenomeBuilder:
     def with_gtf_file(self, gtf_path: Path) -> "GenomeBuilder":
         """
         Parses a GTF file to build the gene-transcript-exon hierarchy.
-        `with_dna_fasta()` and `with_cdna_fasta()` must be called before this method.
+        `with_dna_fasta()` must be called before this method.
         """
-
+        
         if not self._genome.chromosomes:
             raise BuilderStateError("Must call with_dna_fasta() before with_gtf_file().")
-        if not self._cdna_records:
-            raise BuilderStateError("Must call with_cdna_fasta() before with_gtf_file().")
         if self._genes_map:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
@@ -214,7 +210,7 @@ class GenomeBuilder:
                     dbfn=str(gtf_db_path),
                     keep_order=False,
                     merge_strategy='error',
-                    id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'},
+                    id_spec={'gene': 'gene_id', 'transcript': 'transcript_id', 'exon': 'exon_id'},
                     disable_infer_genes=True,
                     disable_infer_transcripts=True
             )
@@ -222,128 +218,77 @@ class GenomeBuilder:
         logging.info(f"GTF database created at: {gtf_db_path}")
         
         start_time = time.time()
-        self._create_genes(db)
-        self.logger.info(f"Created genes in {time.time() - start_time:.2f} seconds")
-
-        start_time = time.time()
-        self._create_transcripts(db)
-        self.logger.info(f"Created transcripts in {time.time() - start_time:.2f} seconds")
-
-        start_time = time.time()
-        self._create_exons(db)
-        self.logger.info(f"Created exons in {time.time() - start_time:.2f} seconds")
+        self._create_gene_hierarchy(db)
+        self.logger.info(f"Created gene hierarchy in {time.time() - start_time:.2f} seconds")
 
         self.logger.info(f"Successfully parsed and linked {len(self._genes_map)} genes, "
                          f"{len(self._transcripts_map)} transcripts.")
         return self
 
-    def _create_genes(self, db: gffutils.FeatureDB):
-        """Creates Gene objects from the GTF database."""
-        self.logger.info("Creating genes...")
-        query = "SELECT id, seqid, start, end, strand, attributes FROM features WHERE featuretype = 'gene'"
+    def _create_gene_hierarchy(self, db: gffutils.FeatureDB):
+        """Creates the gene-transcript-exon hierarchy from the GTF database."""
         
-        count_query = "SELECT count(*) FROM features WHERE featuretype = 'gene'"
-        total_genes = db.conn.execute(count_query).fetchone()[0]
-
-
-        for g_id, seqid, start, end, strand, attributes_json in tqdm(db.conn.execute(query), total=total_genes, desc="Creating genes"):
-            if self._chromosome_filter and seqid not in self._chromosome_filter:
+        for g in db.features_of_type('gene', order_by='start'):
+            if self._chromosome_filter and g.chrom not in self._chromosome_filter:
                 continue
-            
+
             try:
-                chromosome = self._genome.chromosome_by_id(seqid)
+                chromosome = self._genome.chromosome_by_id(g.chrom)
             except ValueError:
                 if self._scaffold_genome:
-                    chromosome = self._scaffold_genome.chromosome_by_id(seqid)
+                    try:
+                        chromosome = self._scaffold_genome.chromosome_by_id(g.chrom)
+                    except ValueError:
+                        self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
+                        continue
                 else:
-                    self.logger.warning(f"Chromosome '{seqid}' for gene '{g_id}' not found. Skipping gene.")
+                    self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
                     continue
-            
+
             if not chromosome:
-                self.logger.warning(f"Chromosome '{seqid}' for gene '{g_id}' not found. Skipping gene.")
+                self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found. Skipping gene.")
                 continue
 
             try:
-                attributes = json.loads(attributes_json)
-
-                gene_names = attributes.pop('gene_name', attributes.pop('gene', [g_id]))
-                gene_name = gene_names[0]
-                attributes['gene_synonyms'] = gene_names[1:]
-
-                attributes = {k: v for k, v in attributes.items() 
-                            if not (k.startswith('exon') or k.startswith('transcript'))}
-                
-                gene_id = attributes.pop('gene_id', [g_id])[0]
+                attributes = dict(g.extra)
+                print(attributes)
+                return
+                gene_names = attributes.pop('gene_name', attributes.pop('gene', [g.id]))
+                gene_name = gene_names.pop(0) if isinstance(gene_names, list) else gene_names
+                attributes['gene_synonyms'] = gene_names
+                attributes = {k: v for k, v in attributes.items() if not (k.startswith('exon') or k.startswith('transcript'))}
                 attributes = {k.replace('gene_', ''): v for k, v in attributes.items()}
-                attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
-
-                gene = Gene(id=gene_id, name=gene_name, start=start,
-                            end=end, strand=strand, chromosome=chromosome,
-                            genome=self._genome,
-                            **attributes)
+                
+                gene = Gene(id=g.id, name=gene_name, start=g.start,
+                            end=g.end, strand=g.strand, chromosome=chromosome,
+                            genome=self._genome, **attributes)
                 chromosome.add_gene(gene)
-                self._genes_map[g_id] = gene
-
-            except Exception as e:
-                self.logger.warning(f"Error processing gene '{g_id}': {e}. Skipping.")
-
-    def _create_transcripts(self, db: gffutils.FeatureDB):
-        """Creates Transcript objects and links them to genes."""
-        self.logger.info("Creating transcripts...")
-        query = "SELECT id, start, end, strand, attributes FROM features WHERE featuretype = 'transcript'"
-        
-        count_query = "SELECT count(*) FROM features WHERE featuretype = 'transcript'"
-        total_transcripts = db.conn.execute(count_query).fetchone()[0]
-
-        for t_id, start, end, strand, attributes_json in tqdm(db.conn.execute(query), total=total_transcripts, desc="Creating transcripts"):
-            attributes = json.loads(attributes_json)
-
-            gene_id = attributes.pop('gene_id', attributes.pop('gene', [None]))[0]
-            transcript_id = attributes.pop('transcript_id', [t_id])[0]  
-            
-            attributes = {k: v for k, v in attributes.items() 
-                            if not (k.startswith('exon') or k.startswith('gene'))}
-            attributes = {k.replace('transcript_', ''): v for k, v in attributes.items()}
-            attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
-            if gene_id and gene_id in self._genes_map:
-                gene = self._genes_map[gene_id]
-                sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
-                transcript = Transcript(id=transcript_id, start=start, end=end, strand=strand,
-                                        sequence=sequence, gene=gene, genome=self._genome, **attributes)
-                gene.add_transcript(transcript)
-                self._transcripts_map[t_id] = transcript
-            else:
-                self.logger.warning(f"Gene '{gene_id}' for transcript '{t_id}' not found. Skipping transcript.")
-
-    def _create_exons(self, db: gffutils.FeatureDB):
-        """Creates Exon objects and links them to transcripts."""
-        self.logger.info("Creating exons...")
-        query = "SELECT id, seqid, start, end, strand, attributes FROM features WHERE featuretype = 'exon'"
-        
-        count_query = "SELECT count(*) FROM features WHERE featuretype = 'exon'"
-        total_exons = db.conn.execute(count_query).fetchone()[0]
-
-        for e_id, seqid, start, end, strand, attributes_json in tqdm(db.conn.execute(query), total=total_exons, desc="Creating exons"):
-            if self._chromosome_filter and seqid not in self._chromosome_filter:
+                self._genes_map[g.id] = gene
+            except KeyError:
+                self.logger.warning(f"Chromosome '{g.chrom}' for gene '{g.id}' not found in FASTA. Skipping gene.")
                 continue
 
-            attributes = json.loads(attributes_json)
+            for t in db.children(g.id, featuretype='transcript', order_by='start'):
+                t_attributes = dict(t.attributes)
+                transcript_id = t_attributes.pop('transcript_id', [t.id])[0]
+                t_attributes = {k: v for k, v in t_attributes.items() if not (k.startswith('exon') or k.startswith('gene'))}
+                t_attributes = {k.replace('transcript_', ''): v for k, v in t_attributes.items()}
+                
+                sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
+                transcript = Transcript(id=transcript_id, start=t.start, end=t.end, strand=t.strand,
+                                        sequence=sequence, gene=gene, genome=self._genome, **t_attributes)
+                gene.add_transcript(transcript)
+                self._transcripts_map[t.id] = transcript
 
-            transcript_id = attributes.pop('transcript_id', [None])[0]
-            exon_id = attributes.pop('exon_id', [e_id])[0]
-            
-            attributes = {k: v for k, v in attributes.items() 
-                            if not (k.startswith('transcript') or k.startswith('gene'))}
-            attributes = {k.replace('exon_', ''): v for k, v in attributes.items()}
-            attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
-            if transcript_id and transcript_id in self._transcripts_map:
-                transcript = self._transcripts_map[transcript_id]
-                exon = Exon(id=exon_id, start=start, end=end, strand=strand, transcript=transcript,
-                            genome=self._genome,
-                            **attributes)
-                transcript.add_exon(exon)
-            else:
-                self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
+                for e in db.children(t.id, featuretype='exon', order_by='start'):
+                    e_attributes = dict(e.attributes)
+                    exon_id = e_attributes.pop('exon_id', [e.id])[0]
+                    e_attributes = {k: v for k, v in e_attributes.items() if not (k.startswith('transcript') or k.startswith('gene'))}
+                    e_attributes = {k.replace('exon_', ''): v for k, v in e_attributes.items()}
+
+                    exon = Exon(id=exon_id, start=e.start, end=e.end, strand=e.strand, transcript=transcript,
+                                genome=self._genome, **e_attributes)
+                    transcript.add_exon(exon)
 
     def build(self, pickle_genome: bool = False) -> Genome | tuple[Genome, Genome]:
         """
@@ -364,8 +309,8 @@ class GenomeBuilder:
 
         self.logger.info("Genome construction complete.")
         
-        self._offload_memory()
-        
+        # self._offload_memory()
+
         # if pickle_genome:
         #     output_path = self._output_dir / f"{self._genome.species}.{self._genome.id}.pkl"
         #     output_path.parent.mkdir(parents=True, exist_ok=True)

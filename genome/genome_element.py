@@ -22,11 +22,7 @@ class GenomeElement(ABC):
         self._genome: "Genome" = genome
 
         for key, value in kwargs.items():
-            # Unpack single-item lists to save memory
-            if isinstance(value, list) and len(value) == 1:
-                setattr(self, key, value[0])
-            else:
-                setattr(self, key, value)
+            setattr(self, key, value)
     
     
     @property
