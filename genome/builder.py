@@ -259,8 +259,8 @@ class GenomeBuilder:
                 # Remove exon and transcript related attributes
                 attributes = {k: v for k, v in attributes.items() 
                             if not (k.startswith('exon') or k.startswith('transcript'))}
-                attributes = {k.replace('gene_', ''): v for k, v in attributes.items()}
                 gene_id = attributes.pop('gene_id', [g.id])[0]
+                attributes = {k.replace('gene_', ''): v for k, v in attributes.items()}
                 
                 gene = Gene(id=gene_id, name=gene_name, start=g.start,
                             end=g.end, strand=g.strand, chromosome=chromosome,
