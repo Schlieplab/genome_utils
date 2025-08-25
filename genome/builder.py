@@ -259,6 +259,7 @@ class GenomeBuilder:
                 # Remove exon and transcript related attributes
                 attributes = {k: v for k, v in attributes.items() 
                             if not (k.startswith('exon') or k.startswith('transcript'))}
+                attributes = {k.replace('gene_', ''): v for k, v in attributes.items()}
                 gene_id = attributes.pop('gene_id', [g.id])[0]
                 
                 gene = Gene(id=gene_id, name=gene_name, start=g.start,
@@ -282,7 +283,7 @@ class GenomeBuilder:
             # Remove exon and gene related attributes
             attributes = {k: v for k, v in attributes.items() 
                             if not (k.startswith('exon') or k.startswith('gene'))}
-            
+            attributes = {k.replace('transcript_', ''): v for k, v in attributes.items()}
             if gene_id and gene_id in self._genes_map:
                 gene = self._genes_map[gene_id]
                 sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
@@ -306,7 +307,7 @@ class GenomeBuilder:
             # Remove transcript and gene related attributes
             attributes = {k: v for k, v in attributes.items() 
                             if not (k.startswith('transcript') or k.startswith('gene'))}
-            
+            attributes = {k.replace('exon_', ''): v for k, v in attributes.items()}
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
                 exon = Exon(id=exon_id, start=e.start, end=e.end, strand=e.strand, transcript=transcript,
