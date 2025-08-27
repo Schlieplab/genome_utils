@@ -6,43 +6,50 @@ import gget
 from .downloader import Downloader
 
 
-class GgetEnsemblGenomeDownloader(Downloader):
+class EnsemblGenomeDownloader(Downloader):
     """
-    Downloads genome data using the `gget` library.
+    Downloads genome data from Ensembl.
 
-    This downloader leverages `gget` to fetch the download URLs
-    for genomic data, and then uses the base Downloader to manage the
-    file transfer and caching.
+    This downloader fetches the download URLs
+    for genomic data using `gget`, downloads the files, and stores them in `genomes_root_dir\ensembl\{assembly_id}\{ensembl_release}`.
     """
 
-    def __init__(self, assembly_id: str, ensembl_release: int, species: str, genomes_root_dir: Path = Path('./data')):
+    def __init__(self, 
+                 assembly_id: str, 
+                 ensembl_release: int, 
+                 species: str, 
+                 genomes_root_dir: Path | str = Path('./data/genomes')
+                 ):
         """
-        Initializes the GgetEnsemblGenomeDownloader.
+        Initializes the EnsemblGenomeDownloader.
         
         Args:
             assembly_id: The identifier for the genome assembly (e.g., 'GRCh38').
+            ensembl_release: The release number of the Ensembl database.
             species: The scientific name for the species (e.g., 'homo_sapiens').
-            genomes_root_dir: The parent directory to store all downloaded genomes.
+            genomes_root_dir: The parent directory to store all downloaded genomes. Defaults to './data/genomes'.
         """
         self.ensembl_release = ensembl_release
+        self.assembly_id = assembly_id
         self.species = species
-        
-        genome_dir = genomes_root_dir / assembly_id / str(ensembl_release)
+        self.genomes_root_dir = Path(genomes_root_dir)
+        genome_dir = self.genomes_root_dir / 'ensembl' / assembly_id / str(ensembl_release)
         super().__init__(genome_dir)
-        self.logger = logging.getLogger(self.__class__.__name__)
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(assembly_id={self.assembly_id}, ensembl_release={self.ensembl_release}, species={self.species}, genomes_root_dir={self.genomes_root_dir})"
+        return (f"{self.__class__.__name__}("
+                f"assembly_id={self.assembly_id}, "
+                f"ensembl_release={self.ensembl_release}, "
+                f"species={self.species}, "
+                f"genomes_root_dir={self.genomes_root_dir})")
 
     def download(self) -> dict[str, Path]:
         """
-        Downloads all necessary genome files using gget.
-
-
+        Downloads all necessary genome files using gget to retrieve the URLs.
 
         Returns:
             A dictionary mapping a file type to the local Path.
-            Keys are 'dna', 'cdna', and 'annotation'.
+            Keys are `dna`, `cdna`, and `annotation`.
         """
         gtf_url, cdna_url, dna_url = tuple(
             gget.ref(self.species, 

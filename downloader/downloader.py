@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Set
 from pathlib import Path
 import tempfile
 import shutil
@@ -9,22 +9,24 @@ import logging
 class Downloader:
     """Abstract base class for all downloaders."""
     
-    def __init__(self, cache_dir: Optional[Path] = None):
-        """
-        Initialize the downloader.
+    def __init__(self, download_dir: Optional[Path] = None):
+        """      
+        Initializes the Downloader.
         
         Args:
-            cache_dir: Optional directory for caching downloaded files.
+            download_dir: Directory for storing downloaded files.
                       If None, uses a temporary directory.
         """
-        self.cache_dir = cache_dir or Path(tempfile.mkdtemp())
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._is_temp_cache = download_dir is None
+        self.download_dir = download_dir or Path(tempfile.mkdtemp())
+        self.download_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._created_files: Set[Path] = set()
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(cache_dir={self.cache_dir})"
+        return f"{self.__class__.__name__}(download_dir={self.download_dir})"
     
-    def download_file(self, url: str, filename: str, force: bool = False) -> Path:
+    def download_file(self, url: str, filename: str = None, force: bool = False) -> Path:
         """
         Download a single file from a URL and saves it in the cache directory.
 
@@ -36,7 +38,9 @@ class Downloader:
         Returns:
             The path to the downloaded file.
         """
-        destination_path = self.cache_dir / filename
+        if filename is None:
+            filename = url.split('/')[-1]
+        destination_path = self.download_dir / filename
         
         if not force and destination_path.exists():
             self.logger.info(f"File '{filename}' already exists in cache. Skipping download.")
@@ -47,10 +51,18 @@ class Downloader:
             r.raise_for_status()
             with open(destination_path, 'wb') as f:
                 shutil.copyfileobj(r.raw, f)
+        self._created_files.add(destination_path)
         self.logger.info(f"Successfully downloaded '{filename}'.")
         return destination_path
     
     def cleanup(self):
-        """Clean up any temporary files/directories."""
-        if self.cache_dir.exists():
-            shutil.rmtree(self.cache_dir) 
+        """
+        Clean up created files.
+        """
+        if self._is_temp_cache:
+            if self.download_dir.exists():
+                shutil.rmtree(self.download_dir)
+        else:
+            for path in self._created_files:
+                if path.exists():
+                    path.unlink() 

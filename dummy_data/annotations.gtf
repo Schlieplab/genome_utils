@@ -1,8 +1,0 @@
-chr1	dummy	gene	5	35	.	+	.	gene_id "GENE001"; gene_name "MYGENE"; gene_source "ensembl";
-chr1	dummy	transcript	5	35	.	+	.	gene_id "GENE001"; transcript_id "TRANSCRIPT001"; transcript_biotype "protein_coding";
-chr1	dummy	exon	5	15	.	+	.	gene_id "GENE001"; transcript_id "TRANSCRIPT001"; exon_id "EXON001.1";
-chr1	dummy	exon	25	35	.	+	.	gene_id "GENE001"; transcript_id "TRANSCRIPT001"; exon_id "EXON001.2";
-chr1	dummy	gene	40	60	.	-	.	gene_id "GENE002"; gene_name "MYGENE2";
-chr1	dummy	transcript	40	60	.	-	.	gene_id "GENE002"; transcript_id "TRANSCRIPT002";
-chr1	dummy	exon	50	60	.	-	.	gene_id "GENE002"; transcript_id "TRANSCRIPT002"; exon_id "EXON002.1";
-chr1	dummy	exon	40	45	.	-	.	gene_id "GENE002"; transcript_id "TRANSCRIPT002"; exon_id "EXON002.2";
