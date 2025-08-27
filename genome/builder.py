@@ -345,7 +345,7 @@ class GenomeBuilder:
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
 
-    def build(self, pickle_genome: bool = False) -> Genome | tuple[Genome, Genome]:
+    def build(self) -> Genome | tuple[Genome, Genome]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
         
@@ -366,17 +366,6 @@ class GenomeBuilder:
         
         self._offload_memory()
         
-        # if pickle_genome:
-        #     output_path = self._output_dir / f"{self._genome.species}.{self._genome.id}.pkl"
-        #     output_path.parent.mkdir(parents=True, exist_ok=True)
-        #     self.logger.info(f"Saving genome to {output_path}...")
-        #     if self._scaffold_genome:
-        #         with open(output_path, "wb") as f:
-        #             pickle.dump((self._genome, self._scaffold_genome), f)
-        #     else:
-        #         with open(output_path, "wb") as f:
-        #             pickle.dump(self._genome, f)
-        #     self.logger.info("Genome saved successfully.")
 
         if self._scaffold_genome:
             return self._genome, self._scaffold_genome
