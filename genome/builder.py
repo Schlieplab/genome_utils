@@ -32,8 +32,7 @@ def _strip_version(seq_id: str) -> str:
 
 
 class GenomeBuilder:
-    """
-    Constructs a Genome object from various file formats.
+    """Constructs a Genome object from various file formats.
 
     This builder simplifies the process of assembling a complete Genome object
     by handling the parsing and integration of DNA sequences, cDNA sequences,
@@ -41,7 +40,7 @@ class GenomeBuilder:
 
     The correct order of operations is:
     1. with_dna_fasta()
-    2. with_cdna_fasta() (optional)
+    2. with_cdna_fasta()
     3. with_gtf_file()
     4. build()
 
@@ -55,10 +54,13 @@ class GenomeBuilder:
         )
     """
 
-    def __init__(self, id: str, species: str, name: str, 
+    def __init__(self, 
+                 id: str, 
+                 species: str, 
+                 name: str, 
                  main_chromosomes: Optional[list[str]] = None, 
-                 separate_scaffolds: bool = False, 
-                 output_dir: Path = Path('./data'), **kwargs):
+                 separate_scaffolds: bool = True, 
+                 **kwargs):
         """
         Initializes the GenomeBuilder.
 
@@ -70,8 +72,6 @@ class GenomeBuilder:
                               If None, defaults to human standard chromosomes (1-22, X, Y, M, MT).
             separate_scaffolds: If True, separates scaffold chromosomes into a second Genome object.
                                 The `build()` method will then return a tuple: (main_genome, scaffold_genome).
-            output_dir: The directory to save the pickled genome file. 
-                        If None, defaults to ./data
             kwargs: Additional attributes for the Genome object.
         """
         self._genome = Genome(id, species, name, **kwargs)
@@ -81,7 +81,6 @@ class GenomeBuilder:
         self._chromosome_filter = None
         self._separate_scaffolds = separate_scaffolds
         self._scaffold_genome: Optional[Genome] = None
-        self._output_dir = output_dir
 
         if main_chromosomes is None:
             # Default to standard human chromosomes
@@ -108,6 +107,7 @@ class GenomeBuilder:
         """
         if self._genome.chromosomes:
             raise BuilderStateError("Cannot set chromosome filter after with_dna_fasta() has been called.")
+        
         self._chromosome_filter = set(chromosomes)
         self.logger.info(f"Chromosome filter set to: {self._chromosome_filter}")
         return self
@@ -143,7 +143,7 @@ class GenomeBuilder:
             if self._chromosome_filter and record.id not in self._chromosome_filter:
                 continue
             
-            chromosome = Chromosome(record.id, 1, len(record), '+', dna_records, genome=self._genome)
+            chromosome = Chromosome(record.id, dna_records, genome=self._genome, length=len(record.seq))
 
             if self._separate_scaffolds and record.id not in self._main_chromosomes:
                 if self._scaffold_genome:
@@ -379,19 +379,4 @@ class GenomeBuilder:
         self._genes_map.clear()
         self._transcripts_map.clear()
         
-        
         self.logger.info("Memory offload complete.")
-        
-    @staticmethod
-    def load_from_file(file_path: Path) -> Genome | tuple[Genome, Genome]:
-        """
-        Loads a Genome object (or a tuple of Genome objects) from a pickle file.
-
-        Args:
-            file_path: The path to the pickle file.
-
-        Returns:
-            The loaded Genome object or a tuple of (main_genome, scaffold_genome).
-        """
-        with open(file_path, "rb") as f:
-            return pickle.load(f) 

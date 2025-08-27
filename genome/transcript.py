@@ -30,21 +30,20 @@ class Transcript(GenomeElement):
             end: The genomic end position of the transcript in chromosome.
             strand: The strand in which the transcript is oriented.
             sequence: The sequence of the transcript.
-            gene: The gene that the transcript is associated with.
+            gene: The `Gene` object that the transcript is associated with.
+            genome: The `Genome` object in which the transcript is located.
             kwargs: Additional keyword arguments.
         """
-        locus = Locus(gene.chromosome_id, start, end, strand)
+        self.sequence = sequence
+        locus = Locus(gene.chr, start, end, strand)
         super().__init__(id, locus, gene, genome, **kwargs)
-        self._sequence = sequence
+        
     @property
     def exons(self) -> List["Exon"]:
-        """Returns the list of exons (children) for this transcript."""
         return self._children
 
     def add_exon(self, exon: "Exon"):
-        """Add an exon to the transcript in a sorted manner."""
-        exon._parent = self
-        
+        """Add an `Exon` to the transcript in a sorted manner."""
         pos = 0
         # For '+' strand, sort ascending by start coordinate.
         # For '-' strand, sort descending by start coordinate (transcriptional order).
@@ -58,17 +57,10 @@ class Transcript(GenomeElement):
         
         self._genome.is_indexed = False
 
-    def __len__(self) -> int:
-        return len(self.sequence)
     
     def get_gene(self) -> "Gene":
-        """Returns the gene that this transcript is on."""
+        """Returns the `Gene` object that this transcript is associated with."""
         return self._parent
-    
-    @property
-    def sequence(self) -> str:
-        """Returns the sequence of the transcript."""
-        return str(self._sequence)
     
     def exon_intervals(self) -> List[Tuple[int, int]]:
         """Get the exon intervals for this transcript."""
@@ -106,36 +98,27 @@ class Transcript(GenomeElement):
 
         for exon in exons_in_order:
             exon_len = len(exon)
-            
-            # Determine the overlap between the requested range [start, end)
-            # and this exon's range in transcript coordinates [transcript_pos, transcript_pos + exon_len)
+
             overlap_start = max(start, transcript_pos)
             overlap_end = min(end, transcript_pos + exon_len)
 
             if overlap_start < overlap_end:
-                # This exon contains part of the requested range.
-                # Convert transcript-relative overlap coordinates to exon-relative coordinates.
                 start_in_exon = overlap_start - transcript_pos
                 end_in_exon = overlap_end - transcript_pos
                 
-                # Convert exon-relative coordinates to 1-based genomic coordinates.
                 if self.strand == '+':
                     genomic_start = exon.start + start_in_exon
                     genomic_end = exon.start + end_in_exon - 1
-                else:  # Negative strand
+                else:  # self.strand == "-"
                     genomic_end = exon.end - start_in_exon
                     genomic_start = exon.end - (end_in_exon - 1)
                 
-                genomic_loci.append(Locus(self.chromosome_id, genomic_start, genomic_end, self.strand))
+                genomic_loci.append(Locus(self.chr, genomic_start, genomic_end, self.strand))
 
             transcript_pos += exon_len
             
-            # Optimization: if we've covered the entire requested range, we can stop.
             if transcript_pos >= end:
                 break
-        
-        if not genomic_loci:
-            return None if is_single_point else []
 
         if len(genomic_loci) == 1:
             return genomic_loci[0]

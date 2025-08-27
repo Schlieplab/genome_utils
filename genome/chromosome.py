@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import List, TYPE_CHECKING
 from Bio import SeqIO
 from Bio.Seq import Seq
-from pathlib import Path
 
 from .genome_element import GenomeElement
 from .locus import Locus
@@ -12,53 +11,58 @@ if TYPE_CHECKING:
     from .genome import Genome
 
 class Chromosome(GenomeElement):
-    """Represents a chromosome, with sequence data loaded on demand."""
+    """Represents a chromosome, with sequence data loaded from file on demand."""
 
     def __init__(self, 
                  id: str, 
-                 start: int, 
-                 end: int, 
-                 strand: str, 
                  seq_index: SeqIO.index, 
                  genome: "Genome",
+                 length: int = None,
                  **kwargs):
-        super().__init__(id, Locus(id, start, end, strand), genome=genome, **kwargs)
+        """
+        Initializes a Chromosome object.
+
+        Args:
+            id: The ID of the chromosome.
+            seq_index: The `Bio.SeqIO.index` including the sequence of the chromosome.
+            genome: The `Genome` object in which the chromosome is located.
+            length: The length of the chromosome. If not provided, it will be inferred from the sequence index.
+            **kwargs: Additional keyword arguments.
+        """
         self._seq_index = seq_index
-
-    @property
-    def genes(self) -> List["Gene"]:
-        """Returns the list of genes (children) for this chromosome."""
-        return self._children
-
+        if length is None:
+            length = len(self._seq_index[id].seq)
+            
+        super().__init__(id, Locus(id, 1, length, "+"), genome=genome, **kwargs)
+        
     def add_gene(self, gene: "Gene"):
-        gene._parent = self
         self._children.append(gene) 
         self._genome.is_indexed = False
         
     @property
+    def genes(self) -> List["Gene"]:
+        return self._children
+        
+    @property
     def sequence(self) -> Seq:
-        return str(self._seq_index[self.id].seq)
+        return self._seq_index[self.id].seq
     
-    
-    def get_subsequence(self, locus: Locus) -> str:
+    def get_subsequence_by_locus(self, locus: Locus) -> Seq:
         """
         Returns a subsequence of the chromosome for a given Locus.
-        """
-        if locus.chromosome_id != self.id:
-            raise ValueError(f"Locus is for chromosome '{locus.chromosome_id}', but this is chromosome '{self.id}'.")
-
-        if locus.start < 1:
-            raise ValueError(f"Start coordinate cannot be less than 1: {locus.start}")
-        if locus.end > len(self.sequence):
-            raise ValueError(f"End coordinate ({locus.end}) is out of bounds for chromosome '{self.id}' (length: {len(self.sequence)}).")
+        """        
+        if locus.chr != self.chr:
+            raise ValueError(f"The Locus does not belong to this chromosome: locus.chr={locus.chr} != self.chr={self.chr}")
         
-        # The sequence is stored as a string, convert it to a Seq object.
-        sequence_slice = Seq(self.sequence[locus.start - 1:locus.end])
+        sequence = self.sequence
+        if locus.end > len(sequence):
+            raise ValueError(f"End coordinate ({locus.end}) is out of bounds for chromosome '{self.id}' (length: {len(sequence)}).")
         
+        sequence_slice = sequence[locus.start - 1:locus.end]
         if locus.strand == '+':
-            return str(sequence_slice)
+            return sequence_slice
         elif locus.strand == '-':
-            return str(sequence_slice.reverse_complement())
+            return sequence_slice.reverse_complement()
         else:
             raise ValueError(f"Invalid strand: {locus.strand}")
         

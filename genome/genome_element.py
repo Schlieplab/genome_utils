@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC
-from typing import Optional, List, Any, Dict, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 from .locus import Locus
 
@@ -8,13 +8,24 @@ if TYPE_CHECKING:
     from .genome import Genome
 
 class GenomeElement(ABC):
-    """Abstract base class for genomic elements."""
+    """Abstract base class for genomic elements (e.g. chromosomes, genes, transcripts, exons, etc.)."""
 
-    def __init__(self, id: str, locus: Locus,
+    def __init__(self, 
+                 id: str, 
+                 locus: Locus,
                  parent: Optional[GenomeElement] = None,
                  genome: "Genome" = None,
                  **kwargs):
+        """
+        Initializes the GenomeElement.
         
+        Args:
+            id: The identifier for the genome element.
+            locus: The locus of the genome element.
+            parent: The parent of the genome element.
+            genome: The genome of the genome element.
+            **kwargs: Additional attributes for the genome element.
+        """
         self.id = id
         self.locus = locus
         self._parent = parent
@@ -26,7 +37,7 @@ class GenomeElement(ABC):
     
     
     @property
-    def chromosome_id(self) -> str:
+    def chr(self) -> str:
         return self.locus.chromosome_id
     
     @property

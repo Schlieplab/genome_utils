@@ -1,9 +1,7 @@
 from __future__ import annotations
-from typing import Dict, Iterator, Any, List
+from typing import Dict, List
 
-from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 from .chromosome import Chromosome
 from .gene import Gene
@@ -13,12 +11,12 @@ from .locus import Locus
 
 
 class Genome:
-    """Represents a collection of chromosomes, managing sequence data from a FASTA file."""
+    """Represents a Genome object, includes a collection of chromosomes, genes, transcripts, and exons."""
 
     def __init__(self, id: str, species: str, name: str, **kwargs):
         """
-        Initializes the Genome by indexing a FASTA file.
-        Chromosomes are automatically created based on the sequences in the file.
+        Initializes the Genome object.
+        
         Args:
             id: The ID of the genome.
             species: The species of the genome.
@@ -30,11 +28,7 @@ class Genome:
         self.name = name
 
         for key, value in kwargs.items():
-            # Unpack single-item lists to save memory
-            if isinstance(value, list) and len(value) == 1:
-                setattr(self, key, value[0])
-            else:
-                setattr(self, key, value)
+            setattr(self, key, value)
         
         self._chromosomes: Dict[str, Chromosome] = {}
         self._genes: Dict[str, Gene] = {}
@@ -44,7 +38,6 @@ class Genome:
 
 
     def __repr__(self) -> str:
-        """Return a developer-friendly representation of the Genome."""
         return (f"{self.__class__.__name__}("
                 f"id='{self.id}', "
                 f"species='{self.species}', "
@@ -71,12 +64,12 @@ class Genome:
                         self._exons[exon.id] = exon
         self.is_indexed = True
     
-    def sequence_by_locus(self, locus: Locus) -> Seq:
+    def get_sequence_by_locus(self, locus: Locus) -> Seq:
         """Get a sequence by its locus."""
         if not self.is_indexed:
             raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
         
-        return self._chromosomes[locus.chromosome_id].get_subsequence(locus)
+        return self._chromosomes[locus.chr].get_subsequence_by_locus(locus)
 
 
     @property

@@ -4,8 +4,8 @@ from typing import Literal
 
 @dataclass(frozen=True, order=True)
 class Locus:
-    """Represents a 1-based genomic coordinates on a chromosome."""
-    chromosome_id: str
+    """Represents a 1-based inclusive genomic coordinates on a chromosome."""
+    chr: str
     start: int
     end: int
     strand: Literal["+", "-"] = "+"
@@ -14,23 +14,25 @@ class Locus:
         """Validate coordinates after initialization."""
         if self.start > self.end:
             raise ValueError("Start coordinate cannot be greater than end coordinate.")
+        if self.start < 1:
+            raise ValueError("Start coordinate cannot be less than 1.")
 
     def __len__(self) -> int:
         """Return the length of the locus."""
         return self.end - self.start + 1
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.chromosome_id}:{self.start}-{self.end}, strand={self.strand})"
+        return f"{self.__class__.__name__}({self.chr}:{self.start}-{self.end}, strand={self.strand})"
 
     def overlaps(self, other: Locus) -> bool:
         """Check if this locus overlaps with another."""
-        if self.chromosome_id != other.chromosome_id:
+        if self.chr != other.chr:
             return False
         return self.end >= other.start and self.start <= other.end
 
     def contains(self, other: Locus) -> bool:
         """Check if this locus completely contains another."""
-        if self.chromosome_id != other.chromosome_id:
+        if self.chr != other.chr:
             return False
         return self.start <= other.start and self.end >= other.end 
     
