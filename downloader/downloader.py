@@ -39,7 +39,8 @@ class Downloader:
             The path to the downloaded file.
         """
         if filename is None:
-            filename = url.split('/')[-1]
+            # Extract filename from URL, removing query parameters
+            filename = url.split('/')[-1].split('?')[0]
         destination_path = self.download_dir / filename
         
         if not force and destination_path.exists():

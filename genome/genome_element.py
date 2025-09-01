@@ -38,7 +38,7 @@ class GenomeElement(ABC):
     
     @property
     def chr(self) -> str:
-        return self.locus.chromosome_id
+        return self.locus.chr
     
     @property
     def start(self) -> int:
@@ -59,5 +59,10 @@ class GenomeElement(ABC):
         return f"{self.__class__.__name__}(id='{self.id}', locus={self.locus!r})"
     
     def __eq__(self, other: GenomeElement) -> bool:
-        return self.id == other.id
+        if not isinstance(other, GenomeElement):
+            return False
+        return self.id == other.id and self.locus == other.locus
+    
+    def __hash__(self) -> int:
+        return hash((self.id, self.locus))
 
