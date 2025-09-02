@@ -4,7 +4,7 @@ import pytest
 import tempfile
 import gzip
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 

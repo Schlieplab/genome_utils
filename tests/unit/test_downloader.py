@@ -251,7 +251,8 @@ class TestDownloader:
 
     def test_logger_initialization(self):
         """Test that logger is properly initialized."""
-        with patch('tempfile.mkdtemp'):
+        with patch('tempfile.mkdtemp') as mock_mkdtemp:
+            mock_mkdtemp.return_value = '/tmp/test_logger_dir'
             downloader = Downloader()
         
         assert hasattr(downloader, 'logger')
@@ -295,7 +296,8 @@ class TestDownloader:
     def test_is_temp_cache_flag(self):
         """Test _is_temp_cache flag behavior."""
         # With default directory (should be temp)
-        with patch('tempfile.mkdtemp'):
+        with patch('tempfile.mkdtemp') as mock_mkdtemp:
+            mock_mkdtemp.return_value = '/tmp/test_temp_cache_dir'
             downloader1 = Downloader()
             assert downloader1._is_temp_cache == True
         
