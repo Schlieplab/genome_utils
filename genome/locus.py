@@ -23,6 +23,9 @@ class Locus:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.chr}:{self.start}-{self.end}, strand={self.strand})"
+    
+    def __str__(self):
+        return f"{self.chr}:{self.start}-{self.end},{self.strand}"
 
     def overlaps(self, other: Locus) -> bool:
         """Check if this locus overlaps with another."""
