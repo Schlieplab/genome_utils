@@ -1,4 +1,4 @@
-from .genome import Locus, Chromosome, Gene, Transcript, Exon, Genome, GenomeBuilder
+from .genome import Locus, Chromosome, Gene, Transcript, Exon, Genome, GenomeBuilder, GenomeElement
 from .downloader import EnsemblGenomeDownloader
 
 __all__ = [
@@ -9,5 +9,6 @@ __all__ = [
     "Exon",
     "Genome",
     "GenomeBuilder",
+    "GenomeElement",
     "EnsemblGenomeDownloader",
 ] 

@@ -5,6 +5,7 @@ from .transcript import Transcript
 from .exon import Exon
 from .genome import Genome
 from .builder import GenomeBuilder
+from .genome_element import GenomeElement
 
 __all__ = [
     "Locus",
@@ -14,4 +15,5 @@ __all__ = [
     "Exon",
     "Genome",
     "GenomeBuilder",
+    "GenomeElement",
 ] 
