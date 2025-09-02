@@ -6,6 +6,7 @@ from .exon import Exon
 from .genome import Genome
 from .builder import GenomeBuilder
 from .genome_element import GenomeElement
+from .site import Site
 
 __all__ = [
     "Locus",
@@ -16,4 +17,5 @@ __all__ = [
     "Genome",
     "GenomeBuilder",
     "GenomeElement",
+    "Site",
 ] 
