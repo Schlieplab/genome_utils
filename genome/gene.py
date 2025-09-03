@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING, Literal
 from Bio.Seq import Seq
 from .genome_element import GenomeElement
 from .locus import Locus
@@ -20,7 +20,7 @@ class Gene(GenomeElement):
                  name: str,
                  start: int, 
                  end: int, 
-                 strand: str, 
+                 strand: Literal["+", "-"], 
                  chromosome: "Chromosome", 
                  genome: "Genome",
                  **kwargs):

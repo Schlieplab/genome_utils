@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from .genome_element import GenomeElement
 from .locus import Locus
 from Bio.Seq import Seq
@@ -14,7 +14,7 @@ class Exon(GenomeElement):
                  id: str, 
                  start: int, 
                  end: int, 
-                 strand: str, 
+                 strand: Literal["+", "-"], 
                  transcript: "Transcript", 
                  genome: "Genome",
                  **kwargs):
