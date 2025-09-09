@@ -1,7 +1,7 @@
 from __future__ import annotations
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
-
+from Bio.Seq import Seq
 from .locus import Locus
 
 if TYPE_CHECKING:
@@ -65,4 +65,9 @@ class GenomeElement(ABC):
     
     def __hash__(self) -> int:
         return hash((self.id, self.locus))
+    
+    @property
+    @abstractmethod
+    def sequence(self) -> Seq:
+        pass
 

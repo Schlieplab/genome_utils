@@ -38,9 +38,14 @@ class Site(GenomeElement):
         if id is None:
             id = str(locus)
             
-        self.sequence = sequence
+        self._sequence = sequence
         super().__init__(id, locus, parent, genome, **kwargs)
         
+
+    @property
+    def sequence(self) -> Seq:
+        return self._sequence
+    
 
     def __repr__(self):
         return f"{self.__class__.__name__}(id='{self.id}', locus={self.locus!r}, sequence='{self.sequence}')"

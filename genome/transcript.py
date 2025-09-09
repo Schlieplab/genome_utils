@@ -34,10 +34,15 @@ class Transcript(GenomeElement):
             genome: The `Genome` object in which the transcript is located.
             kwargs: Additional keyword arguments.
         """
-        self.sequence = sequence
+        self._sequence = sequence
         locus = Locus(gene.chr, start, end, strand)
         super().__init__(id, locus, gene, genome, **kwargs)
         
+    @property
+    def sequence(self) -> Seq:
+        return self._sequence
+    
+    
     @property
     def exons(self) -> List["Exon"]:
         return self._children
