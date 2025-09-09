@@ -4,9 +4,10 @@ import tempfile
 import shutil
 import requests
 import logging
+from abc import ABC
 
 
-class Downloader:
+class Downloader(ABC):
     """Abstract base class for all downloaders."""
     
     def __init__(self, download_dir: Optional[Path] = None):

@@ -2,8 +2,20 @@
 
 import pytest
 from unittest.mock import Mock
-from genome.genome_element import GenomeElement
-from genome.locus import Locus
+from Bio.Seq import Seq
+from ...src import GenomeElement, Locus
+
+class ConcreteGenomeElement(GenomeElement):
+    """Concrete implementation of GenomeElement for testing purposes."""
+    
+    def __init__(self, *args, sequence="ATCGATCGATCG", **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sequence = sequence
+    
+    @property
+    def sequence(self) -> Seq:
+        """Return the sequence of this element."""
+        return Seq(self._sequence)
 
 
 class TestGenomeElement:
@@ -15,7 +27,7 @@ class TestGenomeElement:
         genome_mock = Mock()
         parent_mock = Mock()
         
-        element = GenomeElement(
+        element = ConcreteGenomeElement(
             id="test_element",
             locus=locus,
             parent=parent_mock,
@@ -34,7 +46,7 @@ class TestGenomeElement:
         """Test GenomeElement creation with minimal parameters."""
         locus = Locus("chr2", 300, 400)
         
-        element = GenomeElement(id="minimal", locus=locus)
+        element = ConcreteGenomeElement(id="minimal", locus=locus)
         
         assert element.id == "minimal"
         assert element.locus == locus
@@ -45,7 +57,7 @@ class TestGenomeElement:
     def test_genome_element_properties(self):
         """Test that properties correctly access locus attributes."""
         locus = Locus("chr3", 500, 600, "-")
-        element = GenomeElement(id="test", locus=locus)
+        element = ConcreteGenomeElement(id="test", locus=locus)
         
         assert element.chr == "chr3"
         assert element.start == 500
@@ -55,16 +67,16 @@ class TestGenomeElement:
     def test_genome_element_length(self):
         """Test that __len__ returns locus length."""
         locus = Locus("chr1", 100, 200)  # Length should be 101
-        element = GenomeElement(id="test", locus=locus)
+        element = ConcreteGenomeElement(id="test", locus=locus)
         
         assert len(element) == 101
 
     def test_genome_element_repr(self):
         """Test string representation."""
         locus = Locus("chr1", 100, 200, "+")
-        element = GenomeElement(id="test_elem", locus=locus)
+        element = ConcreteGenomeElement(id="test_elem", locus=locus)
         
-        expected = "GenomeElement(id='test_elem', locus=Locus(chr1:100-200, strand=+))"
+        expected = "ConcreteGenomeElement(id='test_elem', locus=Locus(chr1:100-200, strand=+))"
         assert repr(element) == expected
 
     def test_genome_element_equality(self):
@@ -72,10 +84,10 @@ class TestGenomeElement:
         locus1 = Locus("chr1", 100, 200)
         locus2 = Locus("chr2", 300, 400)  # Different locus
         
-        element1 = GenomeElement(id="same_id", locus=locus1)
-        element2 = GenomeElement(id="same_id", locus=locus1)  # Same ID and locus
-        element3 = GenomeElement(id="same_id", locus=locus2)  # Same ID, different locus
-        element4 = GenomeElement(id="different_id", locus=locus1)  # Different ID, same locus
+        element1 = ConcreteGenomeElement(id="same_id", locus=locus1)
+        element2 = ConcreteGenomeElement(id="same_id", locus=locus1)  # Same ID and locus
+        element3 = ConcreteGenomeElement(id="same_id", locus=locus2)  # Same ID, different locus
+        element4 = ConcreteGenomeElement(id="different_id", locus=locus1)  # Different ID, same locus
         
         assert element1 == element2  # Same ID and locus
         assert element1 != element3  # Same ID, different locus
@@ -90,9 +102,9 @@ class TestGenomeElement:
         locus1 = Locus("chr1", 100, 200)
         locus2 = Locus("chr2", 300, 400)
         
-        element1 = GenomeElement(id="element1", locus=locus1)
-        element2 = GenomeElement(id="element1", locus=locus1)  # Same as element1
-        element3 = GenomeElement(id="element2", locus=locus2)  # Different
+        element1 = ConcreteGenomeElement(id="element1", locus=locus1)
+        element2 = ConcreteGenomeElement(id="element1", locus=locus1)  # Same as element1
+        element3 = ConcreteGenomeElement(id="element2", locus=locus2)  # Different
         
         # Test that equal elements have same hash
         assert hash(element1) == hash(element2)
@@ -110,7 +122,7 @@ class TestGenomeElement:
         """Test that additional kwargs become attributes."""
         locus = Locus("chr1", 100, 200)
         
-        element = GenomeElement(
+        element = ConcreteGenomeElement(
             id="test",
             locus=locus,
             gene_type="protein_coding",
@@ -127,7 +139,7 @@ class TestGenomeElement:
     def test_genome_element_children_list(self):
         """Test that children list is properly initialized and accessible."""
         locus = Locus("chr1", 100, 200)
-        element = GenomeElement(id="parent", locus=locus)
+        element = ConcreteGenomeElement(id="parent", locus=locus)
         
         # Should start empty
         assert element._children == []
@@ -144,7 +156,7 @@ class TestGenomeElement:
         locus = Locus("chr1", 100, 200)
         parent_mock = Mock()
         
-        element = GenomeElement(id="child", locus=locus, parent=parent_mock)
+        element = ConcreteGenomeElement(id="child", locus=locus, parent=parent_mock)
         
         assert element._parent == parent_mock
 
@@ -153,7 +165,7 @@ class TestGenomeElement:
         locus = Locus("chr1", 100, 200)
         genome_mock = Mock()
         
-        element = GenomeElement(id="element", locus=locus, genome=genome_mock)
+        element = ConcreteGenomeElement(id="element", locus=locus, genome=genome_mock)
         
         assert element._genome == genome_mock
 
@@ -164,13 +176,13 @@ class TestGenomeElement:
         locus = Locus("chr1", 100, 200)
         
         # This should work
-        element = GenomeElement(id="test", locus=locus)
+        element = ConcreteGenomeElement(id="test", locus=locus)
         assert isinstance(element, GenomeElement)
 
     def test_genome_element_locus_immutability(self):
         """Test that the locus reference is maintained correctly."""
         locus = Locus("chr1", 100, 200)
-        element = GenomeElement(id="test", locus=locus)
+        element = ConcreteGenomeElement(id="test", locus=locus)
         
         # The locus should be the same object
         assert element.locus is locus
@@ -184,7 +196,7 @@ class TestGenomeElement:
         """Test GenomeElement creation with None values for optional parameters."""
         locus = Locus("chr1", 100, 200)
         
-        element = GenomeElement(
+        element = ConcreteGenomeElement(
             id="test",
             locus=locus,
             parent=None,

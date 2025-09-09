@@ -4,12 +4,7 @@ import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
 
-from genome.genome import Genome
-from genome.chromosome import Chromosome
-from genome.gene import Gene
-from genome.transcript import Transcript
-from genome.exon import Exon
-from genome.locus import Locus
+from ...src import Genome, Chromosome, Gene, Transcript, Exon, Locus
 
 
 class TestGenome:

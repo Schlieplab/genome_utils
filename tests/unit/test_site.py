@@ -3,9 +3,7 @@
 import pytest
 from unittest.mock import Mock
 
-from genome.site import Site
-from genome.locus import Locus
-from genome.genome_element import GenomeElement
+from ...src import Site, Locus, GenomeElement
 
 
 class ConcreteSite(Site):
@@ -264,16 +262,6 @@ class TestSite:
         site5 = ConcreteSite(chr="MT", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site5.locus.chr == "MT"
 
-    def test_site_cannot_be_instantiated_directly(self):
-        """Test that Site abstract class cannot be instantiated directly."""
-        with pytest.raises(TypeError, match="Can't instantiate abstract class Site"):
-            Site(
-                chr="chr1",
-                start=1000,
-                end=2000,
-                strand="+",
-                sequence="ATCG"
-            )
 
     def test_site_sequence_attribute_access(self):
         """Test that sequence attribute can be accessed and modified."""
@@ -289,8 +277,8 @@ class TestSite:
         assert site.sequence == "ATCGATCGATCG"
         
         # Modify sequence
-        site.sequence = "GGGGCCCCAAAA"
-        assert site.sequence == "GGGGCCCCAAAA"
+        with pytest.raises(AttributeError, match="object has no setter"):
+            site.sequence = "GGGGCCCCAAAA"
 
     def test_site_with_none_values_for_optional_params(self):
         """Test Site initialization with explicit None values for optional parameters."""

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .genome import Genome
 
 class Site(GenomeElement):
-    """Abstract base class for genomic sites."""
+    """Base class for genomic sites."""
     def __init__(self, 
                  chr: str, 
                  start: int, 

@@ -6,8 +6,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-from genome.chromosome import Chromosome
-from genome.locus import Locus
+from ...src import Chromosome, Locus
 
 
 class TestChromosome:

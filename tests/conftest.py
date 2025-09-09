@@ -9,12 +9,9 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-from genome.locus import Locus
-from genome.chromosome import Chromosome
-from genome.gene import Gene
-from genome.transcript import Transcript
-from genome.exon import Exon
-from genome.genome import Genome
+from ..src import Locus, Chromosome, Gene, Transcript, Exon, Genome
+
+
 
 
 @pytest.fixture

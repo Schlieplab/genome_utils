@@ -5,8 +5,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, Mock
 
-from genome.genome import Genome
-from genome.builder import GenomeBuilder
+from ...src import Genome
+from ...src import GenomeBuilder
 
 
 class TestIntegration:

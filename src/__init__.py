@@ -8,6 +8,7 @@ from .builder import GenomeBuilder
 from .genome_element import GenomeElement
 from .site import Site
 
+
 __all__ = [
     "Locus",
     "Chromosome",
