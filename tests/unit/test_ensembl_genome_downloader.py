@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ...src.downloaders import EnsemblGenomeDownloader
+from GenomeUtils.downloaders import EnsemblGenomeDownloader
 
 
 class TestEnsemblGenomeDownloader:
@@ -238,7 +238,7 @@ class TestEnsemblGenomeDownloader:
 
     def test_inheritance_from_downloader(self):
         """Test that EnsemblGenomeDownloader properly inherits from Downloader."""
-        from ...src.downloaders import Downloader
+        from GenomeUtils.downloaders import Downloader
         
         downloader = EnsemblGenomeDownloader(
             assembly_id="GRCh38",

@@ -7,11 +7,12 @@ from .genome import Genome
 from .builder import GenomeBuilder
 from .genome_element import GenomeElement
 from .site import Site
+from . import downloaders
 
 
 __all__ = [
     "Locus",
-    "Chromosome",
+    "Chromosome", 
     "Gene",
     "Transcript",
     "Exon",
@@ -19,4 +20,5 @@ __all__ = [
     "GenomeBuilder",
     "GenomeElement",
     "Site",
-] 
+    "downloaders",
+]

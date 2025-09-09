@@ -1,11 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple, TYPE_CHECKING, Literal
+from typing import List, TYPE_CHECKING, Literal
 from Bio.Seq import Seq
 from .genome_element import GenomeElement
 from .locus import Locus
-import os
-import gzip
-import logging
 
 if TYPE_CHECKING:
     from .chromosome import Chromosome
@@ -58,7 +55,3 @@ class Gene(GenomeElement):
     def get_chromosome(self) -> "Chromosome":
         """Returns the `Chromosome` object that this gene is on."""
         return self._parent
-
-    
-
-    

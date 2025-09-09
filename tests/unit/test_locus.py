@@ -1,7 +1,7 @@
 """Tests for the Locus class."""
 
 import pytest
-from ...src import Locus
+from GenomeUtils import Locus
 
 
 class TestLocus:

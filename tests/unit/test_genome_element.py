@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
-from ...src import GenomeElement, Locus
+from GenomeUtils import GenomeElement, Locus
 
 class ConcreteGenomeElement(GenomeElement):
     """Concrete implementation of GenomeElement for testing purposes."""

@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 import requests
 
-from ...src.downloaders import Downloader
+from GenomeUtils.downloaders import Downloader
 
 
 class TestDownloader:

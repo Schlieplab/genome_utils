@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
 
-from ...src import Transcript, Locus
+from GenomeUtils import Transcript, Locus
 
 
 class TestTranscript:

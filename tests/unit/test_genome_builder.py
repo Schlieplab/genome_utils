@@ -8,8 +8,8 @@ from unittest.mock import Mock, patch
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from ...src.builder import GenomeBuilder, BuilderStateError, _strip_version
-from ...src import Genome
+from GenomeUtils.builder import GenomeBuilder, BuilderStateError, _strip_version
+from GenomeUtils.Genome import Genome
 
 
 class TestGenomeBuilder:
@@ -229,7 +229,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         with pytest.raises(BuilderStateError, match="Must call with_cdna_fasta\\(\\) before with_gtf_file"):
             builder.with_gtf_file(gtf_file)
 
-    @patch('genome_utils.src.builder.gffutils')
+    @patch('GenomeUtils.builder.gffutils')
     def test_with_gtf_file_success(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):
         """Test successful GTF file processing."""
         # Setup files
@@ -298,7 +298,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         with pytest.raises(BuilderStateError, match="Cannot build Genome.*GTF data is missing"):
             builder.build()
 
-    @patch('genome_utils.src.builder.gffutils')
+    @patch('GenomeUtils.builder.gffutils')
     def test_build_success_single_genome(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):
         """Test successful build returning single genome."""
         # Setup files and mocks
@@ -338,7 +338,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         assert genome.id == "test"
         assert genome.is_indexed == True
 
-    @patch('genome_utils.src.builder.gffutils')
+    @patch('GenomeUtils.builder.gffutils')
     def test_build_success_with_scaffolds(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):
         """Test successful build returning tuple with scaffolds."""
         # Setup files and mocks

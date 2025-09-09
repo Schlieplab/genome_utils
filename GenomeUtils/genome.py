@@ -1,8 +1,6 @@
 from __future__ import annotations
 from typing import Dict, List
-
 from Bio.Seq import Seq
-
 from .chromosome import Chromosome
 from .gene import Gene
 from .transcript import Transcript
@@ -129,5 +127,3 @@ class Genome:
             return self._exons[exon_id]
         except KeyError:
             raise ValueError(f"Exon with ID '{exon_id}' not found.")
-        
-    

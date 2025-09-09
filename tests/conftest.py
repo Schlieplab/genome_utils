@@ -9,7 +9,8 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-from ..src import Locus, Chromosome, Gene, Transcript, Exon, Genome
+from GenomeUtils import Locus, Chromosome, Transcript, Exon
+from GenomeUtils.Genome import Gene, Genome
 
 
 
