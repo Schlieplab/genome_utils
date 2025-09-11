@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "GenomeUtils"
@@ -15,3 +15,6 @@ dependencies = [
     "biopython",
     "gget",
 ]
+
+[tool.setuptools.packages.find]
+where = ["GenomeUtils"]
