@@ -1,28 +1,17 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "GenomeUtils"
 version = "0.1.0"
-description = "A modern, object-oriented Python library for working with genomic data."
+description = "An object-oriented Python library for working with genomic data."
 readme = "README.md"
 requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
+
 dependencies = [
     "gffutils",
     "requests",
     "biopython",
     "gget",
 ]
-
-[project.urls]
-"Homepage" = "https://github.com/pypa/sampleproject"
-"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
-
-[tool.setuptools]
-packages = ["GenomeUtils"]
