@@ -1,5 +1,5 @@
-import Genome
-import Downloaders
+from . import Genome
+from . import Downloaders
 
 __all__ = [
     "Genome",
