@@ -19,13 +19,13 @@ class TestGenomeBuilder:
         """Test basic GenomeBuilder initialization."""
         builder = GenomeBuilder(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome",
             assembly="Test_v1"
         )
         
         assert builder._genome.id == "test_genome"
-        assert builder._genome.species == "Test species"
+        assert builder._genome.species == "Homo sapiens"
         assert builder._genome.name == "Test Genome"
         assert builder._genome.assembly == "Test_v1"
         assert builder._separate_scaffolds == True  # Default
@@ -37,7 +37,7 @@ class TestGenomeBuilder:
         """Test GenomeBuilder initialization without scaffold separation."""
         builder = GenomeBuilder(
             id="test_genome",
-            species="Test species", 
+            species="Homo sapiens", 
             name="Test Genome",
             separate_scaffolds=False
         )
@@ -50,7 +50,7 @@ class TestGenomeBuilder:
         custom_chroms = ["chr1", "chr2", "chrX"]
         builder = GenomeBuilder(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome",
             main_chromosomes=custom_chroms
         )
@@ -61,7 +61,7 @@ class TestGenomeBuilder:
         """Test that default main chromosomes include standard human chromosomes."""
         builder = GenomeBuilder(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome"
         )
         
@@ -73,7 +73,7 @@ class TestGenomeBuilder:
 
     def test_set_chromosome_filter_success(self):
         """Test setting chromosome filter before DNA loading."""
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         result = builder.set_chromosome_filter(["chr1", "chr2"])
         
         assert result is builder  # Test method chaining
@@ -85,7 +85,7 @@ class TestGenomeBuilder:
         fasta_file = temp_dir / "test.fa"
         fasta_file.write_text(sample_fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_dna_fasta(fasta_file)
         
         with pytest.raises(BuilderStateError, match="Cannot set chromosome filter after with_dna_fasta"):
@@ -96,7 +96,7 @@ class TestGenomeBuilder:
         fasta_file = temp_dir / "test.fa"
         fasta_file.write_text(sample_fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=False)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
         result = builder.with_dna_fasta(fasta_file)
         
         assert result is builder  # Test method chaining
@@ -110,7 +110,7 @@ class TestGenomeBuilder:
         with gzip.open(fasta_file, 'wt') as f:
             f.write(sample_fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=False)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
         builder.with_dna_fasta(fasta_file)
         
         assert len(builder._genome.chromosomes) == 2
@@ -123,7 +123,7 @@ class TestGenomeBuilder:
         fasta_file = temp_dir / "test.fa"
         fasta_file.write_text(sample_fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=False)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
         builder.set_chromosome_filter(["chr1"])
         builder.with_dna_fasta(fasta_file)
         
@@ -146,7 +146,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         fasta_file = temp_dir / "test.fa"
         fasta_file.write_text(fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=True)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=True)
         builder.with_dna_fasta(fasta_file)
         
         # chr1 and chrM should be in main genome
@@ -163,7 +163,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         fasta_file = temp_dir / "test.fa"
         fasta_file.write_text(sample_fasta_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_dna_fasta(fasta_file)
         
         with pytest.raises(BuilderStateError, match="with_dna_fasta\\(\\) has already been called"):
@@ -174,7 +174,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         cdna_file = temp_dir / "cdna.fa"
         cdna_file.write_text(sample_cdna_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         result = builder.with_cdna_fasta(cdna_file)
         
         assert result is builder  # Test method chaining
@@ -188,7 +188,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         with gzip.open(cdna_file, 'wt') as f:
             f.write(sample_cdna_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_cdna_fasta(cdna_file)
         
         assert len(builder._cdna_records) == 2
@@ -198,7 +198,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         cdna_file = temp_dir / "cdna.fa"
         cdna_file.write_text(sample_cdna_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_cdna_fasta(cdna_file)
         
         with pytest.raises(BuilderStateError, match="with_cdna_fasta\\(\\) has already been called"):
@@ -209,7 +209,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         gtf_file = temp_dir / "test.gtf"
         gtf_file.write_text(sample_gtf_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         
         # Should fail without DNA FASTA
         with pytest.raises(BuilderStateError, match="Must call with_dna_fasta\\(\\) before with_gtf_file"):
@@ -222,7 +222,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         gtf_file = temp_dir / "test.gtf"
         gtf_file.write_text(sample_gtf_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_dna_fasta(fasta_file)
         
         # Should fail without cDNA FASTA
@@ -261,7 +261,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         mock_gffutils.FeatureDB.return_value = mock_db
         mock_gffutils.create_db.return_value = mock_db
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=False)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
         result = (builder
                  .with_dna_fasta(fasta_file)
                  .with_cdna_fasta(cdna_file)
@@ -281,7 +281,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         gtf_file = temp_dir / "test.gtf"
         gtf_file.write_text(sample_gtf_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         builder.with_dna_fasta(fasta_file)
         builder.with_cdna_fasta(cdna_file)
         
@@ -293,7 +293,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
 
     def test_build_without_gtf(self):
         """Test that build fails without GTF data."""
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         
         with pytest.raises(BuilderStateError, match="Cannot build Genome.*GTF data is missing"):
             builder.build()
@@ -324,7 +324,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         mock_gffutils.FeatureDB.return_value = mock_db
         mock_gffutils.create_db.return_value = mock_db
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=False)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
         builder.with_dna_fasta(fasta_file)
         builder.with_cdna_fasta(cdna_file)
         builder.with_gtf_file(gtf_file)
@@ -364,7 +364,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         mock_gffutils.FeatureDB.return_value = mock_db
         mock_gffutils.create_db.return_value = mock_db
         
-        builder = GenomeBuilder("test", "species", "name", separate_scaffolds=True)
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=True)
         builder.with_dna_fasta(fasta_file)
         builder.with_cdna_fasta(cdna_file)
         builder.with_gtf_file(gtf_file)
@@ -388,7 +388,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         cdna_file = temp_dir / "cdna.fa"
         cdna_file.write_text(sample_cdna_content)
         
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         
         # Test chaining
         chained_builder = (builder
@@ -400,7 +400,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
 
     def test_memory_offload(self):
         """Test that memory is properly offloaded after build."""
-        builder = GenomeBuilder("test", "species", "name")
+        builder = GenomeBuilder("test", "Homo sapiens", "name")
         
         # Setup some data
         builder._cdna_records = {"test": Mock()}
@@ -456,7 +456,7 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         # Build genome
         builder = GenomeBuilder(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome",
             separate_scaffolds=False
         )

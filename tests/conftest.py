@@ -9,7 +9,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-from GenomeUtils import Locus, Chromosome, Transcript, Exon
+from GenomeUtils.Genome import Locus, Chromosome, Transcript, Exon
 from GenomeUtils.Genome import Gene, Genome
 
 
@@ -120,7 +120,7 @@ def sample_genome():
     """Provide a sample Genome object for testing."""
     return Genome(
         id="test_genome",
-        species="Test species",
+        species="Homo sapiens",
         name="Test Genome",
         assembly="Test_v1"
     )
@@ -132,7 +132,7 @@ def complex_genome_structure(mock_seq_index):
     # Create genome
     genome = Genome(
         id="test_genome",
-        species="Test species",
+        species="Homo sapiens",
         name="Test Genome"
     )
     

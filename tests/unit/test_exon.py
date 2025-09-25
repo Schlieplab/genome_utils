@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
 
-from GenomeUtils import Exon, Locus
+from GenomeUtils.Genome import Exon, Locus
 
 
 class TestExon:

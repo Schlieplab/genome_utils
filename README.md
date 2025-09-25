@@ -1,110 +1,197 @@
-# genome-utils
+# GenomeUtils
 
-A modern, object-oriented Python library for working with genomic data.
+A Python library for working with genomic data.
 
-`genome-utils` provides a clean, intuitive, and efficient object model for representing and manipulating genomic features like genes, transcripts, and exons. It is designed to be both powerful for complex bioinformatics tasks and easy to use for everyday scripting.
+Object-oriented model for representing genomic features: genomes, chromosomes, genes, transcripts, and exons.
 
-## Key Features
+## Features
 
-- **Object-Oriented Design:** Represents genomic features as a clear hierarchy of Python objects (`Genome` > `Chromosome` > `Gene` > `Transcript` > `Exon`).
-- **Performance-Aware:** Utilizes lazy loading for sequence data from FASTA files, ensuring low memory usage even with large genomes.
-- **Modern & Pythonic:** Built with modern Python features, including dataclasses for robust value objects (`Locus`) and comprehensive type hinting for clarity and editor support.
-- **Intuitive API:** Access data in a natural way, from iterating over all genes in a genome to mapping coordinates between transcripts and chromosomes.
-- **Flexible & Extensible:** Easily attach arbitrary metadata to any genomic feature.
-
-## Core Concepts
-
-The library is built around a few central classes:
-
--   `Genome`: The top-level container for an entire genome assembly. It manages chromosomes and provides fast, indexed lookups for all genomic features.
--   `Chromosome`: Represents a chromosome, providing access to its full sequence and the genes it contains.
--   `Gene`: Represents a gene, which is a collection of transcripts.
--   `Transcript`: Represents a specific transcript of a gene, containing its exons and its spliced mRNA sequence.
--   `Exon`: Represents an exon, the fundamental unit of a transcript.
--   `Locus`: An immutable dataclass that precisely defines a genomic coordinate range (`chromosome_id`, `start`, `end`, `strand`).
+- Object model: `Genome` > `Chromosome` > `Gene` > `Transcript` > `Exon` (+ `Site`, `Locus`)
+- Builder workflow: `GenomeBuilder` assembles a `Genome` from FASTA (DNA, cDNA) and GTF
+- Indexed lookups, optional scaffold separation, streaming/gzip handling
+- Downloader utilities: Fetch Ensembl DNA, cDNA, and GTF assets with `EnsemblGenomeDownloader`
 
 ## Installation
-
+You can install GenomeUtils via pip with the following command:
 ```bash
-pip install .
+pip install GenomeUtils
 ```
-*(Assuming a `setup.py` or `pyproject.toml` is present for local installation).*
 
-## Quickstart: Example Usage
+Requires Python >= 3.8. Dependencies that will be installed automatically by pip are: `biopython`, `gffutils`, `requests`, `gget`.
 
-Here's how to model a simple gene and explore its features.
+## Quickstart
+
+### 1) Download and build a genome (complete workflow)
+
+```python
+from pathlib import Path
+from GenomeUtils.Downloaders import EnsemblGenomeDownloader
+from GenomeUtils.Genome import GenomeBuilder
+
+# Download Ensembl assets
+downloader = EnsemblGenomeDownloader(
+    assembly_id="GRCh38",
+    ensembl_release=109,
+    species="homo_sapiens",
+    genomes_root_dir=Path("./data/genomes"),
+)
+
+files = downloader.download()
+print(files)  # { 'dna': Path(...), 'cdna': Path(...), 'annotation': Path(...) }
+
+
+# Build genome from downloaded files
+# The builder automatically uses species-appropriate chromosomes:
+# Human: 1-22,X,Y,M,MT | Mouse: 1-19,X,Y,M,MT | Monkey: 1-20,X,Y,M,MT
+genome = (
+    GenomeBuilder(id="GRCh38", species="Homo sapiens", name="Human")
+      .with_dna_fasta(files['dna'])
+      .with_cdna_fasta(files['cdna'])
+      .with_gtf_file(files['annotation'])
+      .build()
+)
+
+# For other species:
+# mouse_genome = GenomeBuilder(id="GRCm39", species="Mus musculus", name="Mouse")...
+# monkey_genome = GenomeBuilder(id="Mmul_10", species="Macaca mulatta", name="Rhesus macaque")...
+
+# Access features
+chromosome = genome.chromosome_by_id("chr1")
+first_gene = chromosome.genes[0]
+print(first_gene.id, first_gene.name)
+
+# Fast lookups (after build() the genome is indexed)
+print(genome.gene_by_id(first_gene.id))
+```
+
+### 2) Build a genome from existing files
+
+```python
+from pathlib import Path
+from GenomeUtils.builder import GenomeBuilder
+
+# Prepare input files (can be .gz):
+dna_fasta = Path("/path/to/genome.dna.fa.gz")
+cdna_fasta = Path("/path/to/genome.cdna.fa.gz")
+gtf_file  = Path("/path/to/annotations.gtf.gz")
+
+builder = GenomeBuilder(
+    id="hg38",
+    species="Homo sapiens",
+    name="Human Reference Genome",
+    separate_scaffolds=False,  # set True to split non-main scaffolds
+)
+
+# Optional: limit to specific chromosomes (must be called before with_dna_fasta)
+builder.set_chromosome_filter(["chr1", "chr2", "chrX"])  # or ["1","2","X"]
+
+genome = (
+    builder
+      .with_dna_fasta(dna_fasta)
+      .with_cdna_fasta(cdna_fasta)
+      .with_gtf_file(gtf_file)
+      .build()
+)
+
+# Access features
+chromosome = genome.chromosome_by_id("chr1")
+first_gene = chromosome.genes[0]
+print(first_gene.id, first_gene.name)
+
+# Fast lookups (after build() the genome is indexed)
+print(genome.gene_by_id(first_gene.id))
+```
+
+### 3) Minimal toy example (no files)
 
 ```python
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from genome_utils import Genome, Chromosome, Gene, Transcript, Exon
+from GenomeUtils.genome import Genome
+from GenomeUtils.chromosome import Chromosome
+from GenomeUtils.gene import Gene
+from GenomeUtils.transcript import Transcript
+from GenomeUtils.exon import Exon
 
-# 1. Set up a Chromosome with its sequence
-# (In a real scenario, this comes from a FASTA file)
+# Create a tiny in-memory genome
+genome = Genome(id="toy", species="Test species", name="Toy Genome")
 chr1_seq = SeqRecord(Seq("AGCATGATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC"), id="chr1")
-chromosome = Chromosome(seq_record=chr1_seq)
+chromosome = Chromosome("chr1", seq_index={"chr1": chr1_seq}, genome=genome, length=len(chr1_seq.seq))
 
-# 2. Create a Genome object and add the chromosome
-genome = Genome(id="hg38_toy", species="Homo sapiens", name="Toy Genome")
 genome.add_chromosome(chromosome)
 
-# 3. Build the feature hierarchy (Gene -> Transcript -> Exon)
-# In a real application, you would parse this from a GFF/GTF file.
-
-# Create a Gene
-gene = Gene(id="GENE001", 
-            name="MYGENE", 
-            start=5, 
-            end=35, 
-            strand='+', 
-            chromosome=chromosome)
+gene = Gene(id="GENE001", name="MYGENE", start=5, end=35, strand='+', chromosome=chromosome, genome=genome)
 chromosome.add_gene(gene)
 
-# Create a Transcript for the Gene
-# The sequence is the final spliced mRNA sequence
 transcript = Transcript(
     id="TRANSCRIPT001",
     start=5,
     end=35,
     strand='+',
-    sequence=Seq("CATGATGCATGCATGCATGCATGCATGC"), # Spliced sequence
-    gene=gene
+    sequence=Seq("CATGATGCATGCATGCATGCATGCATGC"),
+    gene=gene,
+    genome=genome,
 )
+
 gene.add_transcript(transcript)
 
-# Add Exons to the Transcript
-exon1 = Exon(id="EXON001", start=5, end=15, strand='+', transcript=transcript)
-exon2 = Exon(id="EXON002", start=25, end=35, strand='+', transcript=transcript)
-transcript.add_exon(exon1)
-transcript.add_exon(exon2)
+from GenomeUtils.exon import Exon
+transcript.add_exon(Exon(id="EXON001", start=5, end=15, strand='+', transcript=transcript, genome=genome))
+transcript.add_exon(Exon(id="EXON002", start=25, end=35, strand='+', transcript=transcript, genome=genome))
 
-# 4. Index the genome for fast lookups
 genome.index()
-
-# 5. Now, you can easily access your data
-
-# Get a gene by its ID
-my_gene = genome.gene_by_id("GENE001")
-print(f"Found Gene: {my_gene.name}")
-# > Found Gene: MYGENE
-
-# Get the gene's pre-mRNA sequence from the chromosome
-print(f"Gene Sequence: {my_gene.sequence}")
-# > Gene Sequence: CATGATGCATGCATGCATGCATGCATGCATG
-
-# Get the transcript's spliced mRNA sequence
-my_transcript = genome.transcript_by_id("TRANSCRIPT001")
-print(f"Transcript Sequence: {my_transcript.sequence}")
-# > Transcript Sequence: CATGATGCATGCATGCATGCATGCATGC
-
-# Map a position from transcript coordinates to genomic coordinates
-# Where is the 15th base of the spliced mRNA located on the chromosome?
-locus = my_transcript.get_locus_from_transcript_position(15)
-print(f"Position 15 in transcript maps to: {locus}")
-# > Position 15 in transcript maps to: Locus(chr1:29-29 +)
-
+print(genome.gene_by_id("GENE001").name)
 ```
+
+### 4) Species-specific examples
+
+```python
+from pathlib import Path
+from GenomeUtils.Downloaders import EnsemblGenomeDownloader
+from GenomeUtils.Genome import GenomeBuilder
+
+# Human genome (uses chromosomes 1-22, X, Y, M, MT)
+human_genome = GenomeBuilder(
+    id="GRCh38", 
+    species="Homo sapiens", 
+    name="Human Reference Genome"
+).with_dna_fasta(human_dna).with_gtf_file(human_gtf).build()
+
+# Mouse genome (uses chromosomes 1-19, X, Y, M, MT)  
+mouse_genome = GenomeBuilder(
+    id="GRCm39", 
+    species="Mus musculus", 
+    name="Mouse Reference Genome"
+).with_dna_fasta(mouse_dna).with_gtf_file(mouse_gtf).build()
+
+# Monkey genome (uses chromosomes 1-20, X, Y, M, MT)
+monkey_genome = GenomeBuilder(
+    id="Mmul_10", 
+    species="Macaca mulatta", 
+    name="Rhesus Macaque Reference Genome"
+).with_dna_fasta(monkey_dna).with_gtf_file(monkey_gtf).build()
+
+# Override default chromosomes if needed
+custom_genome = GenomeBuilder(
+    id="custom", 
+    species="Custom species", 
+    name="Custom Genome",
+    main_chromosomes=["chr1", "chr2", "chrX"]  # Only these chromosomes
+).with_dna_fasta(custom_dna).with_gtf_file(custom_gtf).build()
+```
+
+## Testing
+
+```bash
+pytest -q
+```
+
+Integration tests that use real files are marked and may be slower.
+
+## Project status
+
+Early-stage library. APIs may evolve.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue for bugs, feature requests, or improvements. 
+Issues and PRs are welcome.

@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
 
-from GenomeUtils import Chromosome, Transcript, Exon, Locus
+from GenomeUtils.Genome import Chromosome, Transcript, Exon, Locus
 from GenomeUtils.Genome import Genome, Gene
 
 
@@ -15,12 +15,12 @@ class TestGenome:
         """Test basic genome creation."""
         genome = Genome(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome"
         )
         
         assert genome.id == "test_genome"
-        assert genome.species == "Test species"
+        assert genome.species == "Homo sapiens"
         assert genome.name == "Test Genome"
         assert genome._chromosomes == {}
         assert genome._genes == {}
@@ -47,16 +47,16 @@ class TestGenome:
         """Test genome string representation."""
         genome = Genome(
             id="test_genome",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Genome"
         )
         
-        expected = "Genome(id='test_genome', species='Test species', name='Test Genome')"
+        expected = "Genome(id='test_genome', species='Homo sapiens', name='Test Genome')"
         assert repr(genome) == expected
 
     def test_genome_add_chromosome(self):
         """Test adding chromosomes to genome."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Create mock chromosomes
         chr1 = Mock(spec=Chromosome)
@@ -74,7 +74,7 @@ class TestGenome:
 
     def test_genome_add_chromosome_duplicate_id(self):
         """Test error when adding chromosome with duplicate ID."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         chr1 = Mock(spec=Chromosome)
         chr1.id = "chr1"
@@ -88,7 +88,7 @@ class TestGenome:
 
     def test_genome_chromosomes_property(self):
         """Test chromosomes property returns list of chromosomes."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Initially empty
         assert genome.chromosomes == []
@@ -109,7 +109,7 @@ class TestGenome:
 
     def test_genome_index_simple(self):
         """Test genome indexing with simple structure."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Create chromosome
         chromosome = Mock(spec=Chromosome)
@@ -142,7 +142,7 @@ class TestGenome:
 
     def test_genome_index_complex(self):
         """Test genome indexing with complex structure."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Create multiple chromosomes
         chr1 = Mock(spec=Chromosome)
@@ -204,7 +204,7 @@ class TestGenome:
 
     def test_genome_chromosome_by_id(self):
         """Test getting chromosome by ID."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         chromosome = Mock(spec=Chromosome)
         chromosome.id = "chr1"
@@ -220,14 +220,14 @@ class TestGenome:
 
     def test_genome_gene_by_id_before_indexing(self):
         """Test error when getting gene by ID before indexing."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         with pytest.raises(RuntimeError, match="The genome is not indexed"):
             genome.gene_by_id("GENE001")
 
     def test_genome_gene_by_id_after_indexing(self):
         """Test getting gene by ID after indexing."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Set up genome structure
         chromosome = Mock(spec=Chromosome)
@@ -252,7 +252,7 @@ class TestGenome:
 
     def test_genome_transcript_by_id(self):
         """Test getting transcript by ID."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Set up genome structure
         chromosome = Mock(spec=Chromosome)
@@ -286,7 +286,7 @@ class TestGenome:
 
     def test_genome_exon_by_id(self):
         """Test getting exon by ID."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Set up genome structure
         chromosome = Mock(spec=Chromosome)
@@ -323,7 +323,7 @@ class TestGenome:
 
     def test_genome_properties_empty(self):
         """Test genome properties when empty."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         assert genome.genes == []
         assert genome.transcripts == []
@@ -331,7 +331,7 @@ class TestGenome:
 
     def test_genome_properties_after_indexing(self):
         """Test genome properties after indexing."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Set up structure
         chromosome = Mock(spec=Chromosome)
@@ -375,7 +375,7 @@ class TestGenome:
 
     def test_genome_get_sequence_by_locus_before_indexing(self):
         """Test error when getting sequence by locus before indexing."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         locus = Locus("chr1", 100, 200)
         
         with pytest.raises(RuntimeError, match="The genome is not indexed"):
@@ -383,7 +383,7 @@ class TestGenome:
 
     def test_genome_get_sequence_by_locus_after_indexing(self):
         """Test getting sequence by locus after indexing."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         # Create chromosome with mock sequence method
         chromosome = Mock(spec=Chromosome)
@@ -403,7 +403,7 @@ class TestGenome:
 
     def test_genome_indexing_resets_flag(self):
         """Test that adding elements resets the indexing flag."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         chromosome = Mock(spec=Chromosome)
         chromosome.id = "chr1"
@@ -421,7 +421,7 @@ class TestGenome:
 
     def test_genome_multiple_indexing(self):
         """Test that genome can be indexed multiple times."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         chromosome = Mock(spec=Chromosome)
         chromosome.id = "chr1"
@@ -446,7 +446,7 @@ class TestGenome:
 
     def test_genome_empty_indexing(self):
         """Test indexing genome with no chromosomes."""
-        genome = Genome("test", "species", "name")
+        genome = Genome("test", "Homo sapiens", "name")
         
         genome.index()
         

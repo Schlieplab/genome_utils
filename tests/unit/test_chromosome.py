@@ -6,7 +6,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 
-from GenomeUtils import Chromosome, Locus
+from GenomeUtils.Genome import Chromosome, Locus
 
 
 class TestChromosome:

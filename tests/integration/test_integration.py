@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch, Mock
 
 from GenomeUtils.Genome import Genome
-from GenomeUtils import GenomeBuilder
+from GenomeUtils.Genome import GenomeBuilder
 
 
 class TestIntegration:
@@ -19,7 +19,7 @@ class TestIntegration:
         
         # Test basic genome properties
         assert genome.id == "test_genome"
-        assert genome.species == "Test species"
+        assert genome.species == "Homo sapiens"
         assert genome.is_indexed == True
         
         # Test chromosome access
@@ -110,14 +110,14 @@ class TestIntegration:
         # Build genome
         builder = GenomeBuilder(
             id="test_build",
-            species="Test species",
+            species="Homo sapiens",
             name="Test Build Genome"
         )
         
         # This would normally work but requires complex mocking of gffutils
         # For now, test the builder initialization
         assert builder._genome.id == "test_build"
-        assert builder._genome.species == "Test species"
+        assert builder._genome.species == "Homo sapiens"
         assert builder._genome.name == "Test Build Genome"
 
     @pytest.mark.integration

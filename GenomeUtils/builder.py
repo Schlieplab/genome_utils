@@ -20,6 +20,36 @@ from .transcript import Transcript
 from .exon import Exon
 from .locus import Locus
 
+
+def _get_default_chromosomes_for_species(species: str) -> set[str]:
+    """
+    Returns the default main chromosomes for common species.
+    
+    Args:
+        species: Species name (case-insensitive)
+        
+    Returns:
+        Set of chromosome identifiers including both with and without 'chr' prefix
+    """
+    species_lower = species.lower()
+    
+    if any(term in species_lower for term in ['human', 'homo sapiens', 'homo_sapiens']):
+        # Human: 1-22, X, Y, M, MT
+        standard_set = {str(i) for i in range(1, 23)} | {'X', 'Y', 'M', 'MT'}
+    elif any(term in species_lower for term in ['mouse', 'mice', 'mus musculus', 'mus_musculus']):
+        # Mouse: 1-19, X, Y, M, MT
+        standard_set = {str(i) for i in range(1, 20)} | {'X', 'Y', 'M', 'MT'}
+    elif any(term in species_lower for term in ['monkey', 'macaque', 'macaca', 'rhesus', 'cynomolgus']):
+        # Monkey (most primates): 1-20, X, Y, M, MT
+        standard_set = {str(i) for i in range(1, 21)} | {'X', 'Y', 'M', 'MT'}
+    else:
+        # Default to human if species not recognized
+        raise ValueError(f"Species '{species}' not recognized. Please use a supported species.")
+    
+    # Return both with and without 'chr' prefix
+    return set(standard_set).union({f'chr{c}' for c in standard_set})
+
+
 class BuilderStateError(Exception):
     """Custom exception for GenomeBuilder state errors."""
     pass
@@ -45,7 +75,7 @@ class GenomeBuilder:
     4. build()
 
     Example:
-        builder = GenomeBuilder(id="hg38", species="Homo sapiens", name="Human Reference Genome")
+        builder = GenomeBuilder(id="hg38", species="homo_sapiens", name="Human Reference Genome")
         genome = (
             builder.with_dna_fasta(Path("path/to/dna.fa"))
             .with_cdna_fasta(Path("path/to/cdna.fa"))
@@ -69,7 +99,8 @@ class GenomeBuilder:
             species: The species of the genome.
             name: The name of the genome.
             main_chromosomes: A list of chromosome IDs to be considered as the main set.
-                              If None, defaults to human standard chromosomes (1-22, X, Y, M, MT).
+                              If None, defaults to species-appropriate chromosomes 
+                              (Human: 1-22,X,Y,M,MT; Mouse: 1-19,X,Y,M,MT; Monkey: 1-20,X,Y,M,MT).
             separate_scaffolds: If True, separates scaffold chromosomes into a second Genome object.
                                 The `build()` method will then return a tuple: (main_genome, scaffold_genome).
             kwargs: Additional attributes for the Genome object.
@@ -83,9 +114,8 @@ class GenomeBuilder:
         self._scaffold_genome: Optional[Genome] = None
 
         if main_chromosomes is None:
-            # Default to standard human chromosomes
-            standard_set = {str(i) for i in range(1, 23)} | {'X', 'Y', 'M', 'MT'}
-            self._main_chromosomes = standard_set.union({f'chr{c}' for c in standard_set})
+            # Use species-dependent default chromosomes
+            self._main_chromosomes = _get_default_chromosomes_for_species(species)
         else:
             self._main_chromosomes = set(main_chromosomes)
 

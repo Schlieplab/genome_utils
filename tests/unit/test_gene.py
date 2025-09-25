@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from Bio.Seq import Seq
 
 from GenomeUtils.Genome import Gene
-from GenomeUtils import Locus
+from GenomeUtils.Genome import Locus
 
 
 class TestGene:
