@@ -67,7 +67,7 @@ class Transcript(GenomeElement):
     
     def get_gene(self) -> "Gene":
         """Returns the `Gene` object that this transcript is associated with."""
-        return self._parent
+        return self.parent
     
     def exon_intervals(self) -> List[Tuple[int, int]]:
         """Get the exon intervals for this transcript."""

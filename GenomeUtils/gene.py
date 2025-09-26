@@ -55,4 +55,4 @@ class Gene(GenomeElement):
     
     def get_chromosome(self) -> "Chromosome":
         """Returns the `Chromosome` object that this gene is on."""
-        return self._parent
+        return self.parent

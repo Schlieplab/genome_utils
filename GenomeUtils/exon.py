@@ -38,7 +38,7 @@ class Exon(GenomeElement):
     
     def get_transcript(self) -> "Transcript":
         """Returns the `Transcript` object that the exon belongs to."""
-        return self._parent
+        return self.parent
     
     @property
     def sequence(self) -> Seq:

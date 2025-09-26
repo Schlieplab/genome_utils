@@ -52,7 +52,7 @@ class GenomeElement(ABC):
     def parent(self) -> GenomeElement:
         """Returns the parent of the genome element."""
         if self._parent is None:
-            raise ValueError("Parent is not set.")
+            raise ValueError("Parent `GenomeElement` is not set.")
         return self._parent
 
     @property
