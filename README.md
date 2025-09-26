@@ -6,7 +6,7 @@ Object-oriented model for representing genomic features: genomes, chromosomes, g
 
 ## Features
 
-- Object model: `Genome` > `Chromosome` > `Gene` > `Transcript` > `Exon` (+ `Site`, `Locus`)
+- Object model: `Genome` > `Chromosome` > `Gene` > `Transcript` > `Exon` (+ `Locus`)
 - Builder workflow: `GenomeBuilder` assembles a `Genome` from FASTA (DNA, cDNA) and GTF
 - Indexed lookups, optional scaffold separation, streaming/gzip handling
 - Downloader utilities: Fetch Ensembl DNA, cDNA, and GTF assets with `EnsemblGenomeDownloader`
