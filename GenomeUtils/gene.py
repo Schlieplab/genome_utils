@@ -15,11 +15,12 @@ class Gene(GenomeElement):
     def __init__(self, 
                  id: str, 
                  name: str,
+                 chr: str,
                  start: int, 
                  end: int, 
                  strand: Literal["+", "-"], 
-                 chromosome: "Chromosome", 
-                 genome: "Genome",
+                 chromosome: "Chromosome" = None, 
+                 genome: "Genome" = None,
                  **kwargs):
         """
         Initializes a Gene object.
@@ -27,16 +28,16 @@ class Gene(GenomeElement):
         Args:
             id: The ID of the gene.
             name: The name of the gene.
+            chr: The chromosome identifier (e.g., 'chr1', '1', 'X').
             start: The genomic start position of the gene in chromosome.
             end: The genomic end position of the gene in chromosome.
             strand: The strand in which the gene is oriented.
-            chromosome: The `Chromosome` object that the gene is on.
-            genome: The `Genome` object in which the gene is located.
+            chromosome: The `Chromosome` object that the gene is on. Optional, defaults to None.
+            genome: The `Genome` object in which the gene is located. Optional, defaults to None.
             kwargs: Additional keyword arguments.
         """
         self.name = name
-        locus = Locus(chromosome.chr, start, end, strand)
-        
+        locus = Locus(chr, start, end, strand)
         super().__init__(id, locus, chromosome, genome, **kwargs)
     
     @property

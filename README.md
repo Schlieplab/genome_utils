@@ -42,7 +42,7 @@ print(files)  # { 'dna': Path(...), 'cdna': Path(...), 'annotation': Path(...) }
 
 # Build genome from downloaded files
 # The builder automatically uses species-appropriate chromosomes:
-# Human: 1-22,X,Y,M,MT | Mouse: 1-19,X,Y,M,MT | Monkey: 1-20,X,Y,M,MT
+# Human: 1-22,X,Y,M,MT | Mouse: 1-19,X,Y,M,MT
 genome = (
     GenomeBuilder(id="GRCh38", species="Homo sapiens", name="Human")
       .with_dna_fasta(files['dna'])
@@ -53,10 +53,9 @@ genome = (
 
 # For other species:
 # mouse_genome = GenomeBuilder(id="GRCm39", species="Mus musculus", name="Mouse")...
-# monkey_genome = GenomeBuilder(id="Mmul_10", species="Macaca mulatta", name="Rhesus macaque")...
 
 # Access features
-chromosome = genome.chromosome_by_id("chr1")
+chromosome = genome.chromosome_by_id("1")
 first_gene = chromosome.genes[0]
 print(first_gene.id, first_gene.name)
 
@@ -164,12 +163,6 @@ mouse_genome = GenomeBuilder(
     name="Mouse Reference Genome"
 ).with_dna_fasta(mouse_dna).with_gtf_file(mouse_gtf).build()
 
-# Monkey genome (uses chromosomes 1-20, X, Y, M, MT)
-monkey_genome = GenomeBuilder(
-    id="Mmul_10", 
-    species="Macaca mulatta", 
-    name="Rhesus Macaque Reference Genome"
-).with_dna_fasta(monkey_dna).with_gtf_file(monkey_gtf).build()
 
 # Override default chromosomes if needed
 custom_genome = GenomeBuilder(

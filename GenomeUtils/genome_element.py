@@ -47,6 +47,13 @@ class GenomeElement(ABC):
     @property
     def end(self) -> int:
         return self.locus.end
+    
+    @property
+    def parent(self) -> GenomeElement:
+        """Returns the parent of the genome element."""
+        if self._parent is None:
+            raise ValueError("Parent is not set.")
+        return self._parent
 
     @property
     def strand(self) -> str:

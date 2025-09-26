@@ -39,9 +39,6 @@ def _get_default_chromosomes_for_species(species: str) -> set[str]:
     elif any(term in species_lower for term in ['mouse', 'mice', 'mus musculus', 'mus_musculus']):
         # Mouse: 1-19, X, Y, M, MT
         standard_set = {str(i) for i in range(1, 20)} | {'X', 'Y', 'M', 'MT'}
-    elif any(term in species_lower for term in ['monkey', 'macaque', 'macaca', 'rhesus', 'cynomolgus']):
-        # Monkey (most primates): 1-20, X, Y, M, MT
-        standard_set = {str(i) for i in range(1, 21)} | {'X', 'Y', 'M', 'MT'}
     else:
         # Default to human if species not recognized
         raise ValueError(f"Species '{species}' not recognized. Please use a supported species.")
@@ -100,7 +97,7 @@ class GenomeBuilder:
             name: The name of the genome.
             main_chromosomes: A list of chromosome IDs to be considered as the main set.
                               If None, defaults to species-appropriate chromosomes 
-                              (Human: 1-22,X,Y,M,MT; Mouse: 1-19,X,Y,M,MT; Monkey: 1-20,X,Y,M,MT).
+                              (Human: 1-22,X,Y,M,MT; Mouse: 1-19,X,Y,M,MT).
             separate_scaffolds: If True, separates scaffold chromosomes into a second Genome object.
                                 The `build()` method will then return a tuple: (main_genome, scaffold_genome).
             kwargs: Additional attributes for the Genome object.
@@ -150,14 +147,11 @@ class GenomeBuilder:
         if self._genome.chromosomes:
             raise BuilderStateError("with_dna_fasta() has already been called.")
 
-        self.logger.info(f"Loading DNA sequences from {dna_fasta_path}...")
-
         dna_file_to_use = dna_fasta_path
 
         if str(dna_fasta_path).endswith('.gz'):
             extracted_path = dna_fasta_path.with_suffix('')
             if extracted_path.exists():
-                self.logger.info(f"Using existing extracted DNA FASTA file: {extracted_path}")
                 dna_file_to_use = extracted_path
             else:
                 self.logger.info(f"Extracting gzipped DNA FASTA to: {extracted_path}")
@@ -166,6 +160,7 @@ class GenomeBuilder:
                         shutil.copyfileobj(gz_in, f_out)
                 dna_file_to_use = extracted_path
 
+        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}...")
 
         dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
         
@@ -251,25 +246,18 @@ class GenomeBuilder:
 
         logging.info(f"GTF database created at: {gtf_db_path}")
         
-        start_time = time.time()
         self._create_genes(db)
-        self.logger.info(f"Created genes in {time.time() - start_time:.2f} seconds")
 
-        start_time = time.time()
         self._create_transcripts(db)
-        self.logger.info(f"Created transcripts in {time.time() - start_time:.2f} seconds")
 
-        start_time = time.time()
         self._create_exons(db)
-        self.logger.info(f"Created exons in {time.time() - start_time:.2f} seconds")
 
-        self.logger.info(f"Successfully parsed and linked {len(self._genes_map)} genes, "
-                         f"{len(self._transcripts_map)} transcripts.")
+        self.logger.info(f"Successfully parsed and linked {len(self._genes_map)} genes "
+                         f"and {len(self._transcripts_map)} transcripts.")
         return self
 
     def _create_genes(self, db: gffutils.FeatureDB):
         """Creates Gene objects from the GTF database."""
-        self.logger.info("Creating genes...")
         query = "SELECT id, seqid, start, end, strand, attributes FROM features WHERE featuretype = 'gene'"
         
         count_query = "SELECT count(*) FROM features WHERE featuretype = 'gene'"
@@ -307,7 +295,7 @@ class GenomeBuilder:
                 attributes = {k.replace('gene_', ''): v for k, v in attributes.items()}
                 attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
 
-                gene = Gene(id=gene_id, name=gene_name, start=start,
+                gene = Gene(id=gene_id, name=gene_name, chr=chromosome.id, start=start,
                             end=end, strand=strand, chromosome=chromosome,
                             genome=self._genome,
                             **attributes)
@@ -319,7 +307,6 @@ class GenomeBuilder:
 
     def _create_transcripts(self, db: gffutils.FeatureDB):
         """Creates Transcript objects and links them to genes."""
-        self.logger.info("Creating transcripts...")
         query = "SELECT id, start, end, strand, attributes FROM features WHERE featuretype = 'transcript'"
         
         count_query = "SELECT count(*) FROM features WHERE featuretype = 'transcript'"
@@ -338,7 +325,7 @@ class GenomeBuilder:
             if gene_id and gene_id in self._genes_map:
                 gene = self._genes_map[gene_id]
                 sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
-                transcript = Transcript(id=transcript_id, start=start, end=end, strand=strand,
+                transcript = Transcript(id=transcript_id, chr=gene.chr, start=start, end=end, strand=strand,
                                         sequence=sequence, gene=gene, genome=self._genome, **attributes)
                 gene.add_transcript(transcript)
                 self._transcripts_map[t_id] = transcript
@@ -347,7 +334,6 @@ class GenomeBuilder:
 
     def _create_exons(self, db: gffutils.FeatureDB):
         """Creates Exon objects and links them to transcripts."""
-        self.logger.info("Creating exons...")
         query = "SELECT id, seqid, start, end, strand, attributes FROM features WHERE featuretype = 'exon'"
         
         count_query = "SELECT count(*) FROM features WHERE featuretype = 'exon'"
@@ -368,7 +354,7 @@ class GenomeBuilder:
             attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
-                exon = Exon(id=exon_id, start=start, end=end, strand=strand, transcript=transcript,
+                exon = Exon(id=exon_id, chr=transcript.chr, start=start, end=end, strand=strand, transcript=transcript,
                             genome=self._genome,
                             **attributes)
                 transcript.add_exon(exon)
@@ -386,7 +372,6 @@ class GenomeBuilder:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
                                     "Please call with_gtf_file() before build().")
         
-        self.logger.info("Indexing genome for fast lookups...")
         self._genome.index()
         if self._scaffold_genome:
             self.logger.info("Indexing scaffold genome for fast lookups...")
@@ -404,9 +389,6 @@ class GenomeBuilder:
 
     def _offload_memory(self):
         """Clears large data structures from memory after the build is complete."""
-        self.logger.info("Offloading builder memory...")
         self._cdna_records.clear()
         self._genes_map.clear()
         self._transcripts_map.clear()
-        
-        self.logger.info("Memory offload complete.")

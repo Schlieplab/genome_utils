@@ -54,7 +54,6 @@ class Downloader(ABC):
             with open(destination_path, 'wb') as f:
                 shutil.copyfileobj(r.raw, f)
         self._created_files.add(destination_path)
-        self.logger.info(f"Successfully downloaded '{filename}'.")
         return destination_path
     
     def cleanup(self):

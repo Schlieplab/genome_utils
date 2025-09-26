@@ -16,7 +16,7 @@ class Chromosome(GenomeElement):
     def __init__(self, 
                  id: str, 
                  seq_index: SeqIO.index, 
-                 genome: "Genome",
+                 genome: "Genome" = None,
                  length: int = None,
                  **kwargs):
         """
@@ -25,7 +25,7 @@ class Chromosome(GenomeElement):
         Args:
             id: The ID of the chromosome.
             seq_index: The `Bio.SeqIO.index` including the sequence of the chromosome.
-            genome: The `Genome` object in which the chromosome is located.
+            genome: The `Genome` object in which the chromosome is located. Optional, defaults to None.
             length: The length of the chromosome. If not provided, it will be inferred from the sequence index.
             **kwargs: Additional keyword arguments.
         """

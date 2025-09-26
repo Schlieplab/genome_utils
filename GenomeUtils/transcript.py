@@ -14,28 +14,30 @@ class Transcript(GenomeElement):
 
     def __init__(self, 
                  id: str, 
+                 chr: str,
                  start: int, 
                  end: int, 
                  strand: str, 
                  sequence: Seq,
-                 gene: "Gene", 
-                 genome: "Genome",
+                 gene: "Gene" = None, 
+                 genome: "Genome" = None,
                  **kwargs):
         """
         Initializes a Transcript object.
 
         Args:
             id: The ID of the transcript.
+            chr: The chromosome identifier (e.g., 'chr1', '1', 'X').
             start: The genomic start position of the transcript in chromosome.
             end: The genomic end position of the transcript in chromosome.
             strand: The strand in which the transcript is oriented.
             sequence: The sequence of the transcript.
-            gene: The `Gene` object that the transcript is associated with.
-            genome: The `Genome` object in which the transcript is located.
+            gene: The `Gene` object that the transcript is associated with. Optional, defaults to None.
+            genome: The `Genome` object in which the transcript is located. Optional, defaults to None.
             kwargs: Additional keyword arguments.
         """
         self._sequence = sequence
-        locus = Locus(gene.chr, start, end, strand)
+        locus = Locus(chr, start, end, strand)
         super().__init__(id, locus, gene, genome, **kwargs)
         
     @property

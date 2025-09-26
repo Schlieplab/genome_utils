@@ -293,3 +293,121 @@ class TestChromosome:
         # Should have proper repr
         expected_repr = f"Chromosome(id='chr1', locus=Locus(chr1:1-{len(test_seq)}, strand=+))"
         assert repr(chromosome) == expected_repr
+
+    def test_chromosome_standalone_creation(self):
+        """Test creating a chromosome without genome dependencies."""
+        test_seq = "ATCGATCGATCG"
+        seq_index = self.create_mock_seq_index({"chr1": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr1",
+            seq_index=seq_index
+        )
+        
+        assert chromosome.id == "chr1"
+        assert chromosome._seq_index == seq_index
+        assert chromosome._genome is None
+        assert len(chromosome) == len(test_seq)
+        assert chromosome.chr == "chr1"
+        assert chromosome.start == 1
+        assert chromosome.end == len(test_seq)
+        assert chromosome.strand == "+"
+
+    def test_chromosome_standalone_with_kwargs(self):
+        """Test creating standalone chromosome with additional attributes."""
+        test_seq = "ATCGATCGATCG"
+        seq_index = self.create_mock_seq_index({"chr3": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr3",
+            seq_index=seq_index,
+            assembly="GRCh38",
+            species="Homo sapiens",
+            build="hg38"
+        )
+        
+        assert chromosome.assembly == "GRCh38"
+        assert chromosome.species == "Homo sapiens"
+        assert chromosome.build == "hg38"
+        assert chromosome._genome is None
+
+    def test_chromosome_standalone_sequence_functionality(self):
+        """Test that sequence functionality works for standalone chromosome."""
+        test_seq = "ATCGATCGATCGAAATTTGGGCCC"
+        seq_index = self.create_mock_seq_index({"chr1": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr1",
+            seq_index=seq_index
+        )
+        
+        assert str(chromosome.sequence) == test_seq
+        
+        # Test subsequence functionality
+        locus = Locus("chr1", 3, 8, "+")
+        subseq = chromosome.get_subsequence_by_locus(locus)
+        expected = test_seq[2:8]  # 0-based indexing
+        assert str(subseq) == expected
+
+    def test_chromosome_standalone_add_gene_fails(self):
+        """Test that add_gene fails gracefully for standalone chromosome."""
+        test_seq = "ATCGATCGATCG"
+        seq_index = self.create_mock_seq_index({"chr1": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr1",
+            seq_index=seq_index
+        )
+        
+        gene_mock = Mock()
+        
+        # This should fail because there's no genome to set is_indexed on
+        with pytest.raises(AttributeError):
+            chromosome.add_gene(gene_mock)
+
+    def test_chromosome_standalone_genes_property(self):
+        """Test that genes property works for standalone chromosome."""
+        test_seq = "ATCGATCGATCG"
+        seq_index = self.create_mock_seq_index({"chr1": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr1",
+            seq_index=seq_index
+        )
+        
+        # Initially empty
+        assert chromosome.genes == []
+        assert chromosome.genes is chromosome._children
+
+    def test_chromosome_standalone_with_explicit_length(self):
+        """Test standalone chromosome creation with explicitly provided length."""
+        test_seq = "ATCGATCGATCG"
+        seq_index = self.create_mock_seq_index({"chr2": test_seq})
+        
+        chromosome = Chromosome(
+            id="chr2",
+            seq_index=seq_index,
+            length=100  # Different from actual sequence length
+        )
+        
+        assert len(chromosome) == 100
+        assert chromosome.end == 100
+        assert chromosome._genome is None
+
+    def test_chromosome_standalone_equality_and_hashing(self):
+        """Test equality and hashing for standalone chromosomes."""
+        test_seq1 = "ATCGATCGATCG"
+        test_seq2 = "ATCGATCGATCG"
+        test_seq3 = "GGGGCCCCAAAA"
+        seq_index1 = self.create_mock_seq_index({"chr1": test_seq1})
+        seq_index2 = self.create_mock_seq_index({"chr1": test_seq2})
+        seq_index3 = self.create_mock_seq_index({"chr2": test_seq3})
+        
+        chromosome1 = Chromosome(id="chr1", seq_index=seq_index1)
+        chromosome2 = Chromosome(id="chr1", seq_index=seq_index2)
+        chromosome3 = Chromosome(id="chr2", seq_index=seq_index3)  # Different ID
+        
+        assert chromosome1 == chromosome2  # Same ID and locus
+        assert chromosome1 != chromosome3  # Different ID
+        assert hash(chromosome1) == hash(chromosome2)
+        assert hash(chromosome1) != hash(chromosome3)

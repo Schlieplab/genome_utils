@@ -154,11 +154,11 @@ def complex_genome_structure(mock_seq_index):
     
     # Create genes
     gene1 = Gene(
-        id="GENE001", name="GENE_1", start=100, end=400, strand="+",
+        id="GENE001", name="GENE_1", chr="chr1", start=100, end=400, strand="+",
         chromosome=chr1, genome=genome, gene_type="protein_coding"
     )
     gene2 = Gene(
-        id="GENE002", name="GENE_2", start=200, end=350, strand="-",
+        id="GENE002", name="GENE_2", chr="chr2", start=200, end=350, strand="-",
         chromosome=chr2, genome=genome, gene_type="lncRNA"
     )
     
@@ -167,12 +167,12 @@ def complex_genome_structure(mock_seq_index):
     
     # Create transcripts
     transcript1 = Transcript(
-        id="TRANS001", start=120, end=380, strand="+",
+        id="TRANS001", chr="chr1", start=120, end=380, strand="+",
         sequence=Seq(sequences["chr1"][119:380]),  # 261 bp
         gene=gene1, genome=genome
     )
     transcript2 = Transcript(
-        id="TRANS002", start=220, end=330, strand="-",
+        id="TRANS002", chr="chr2", start=220, end=330, strand="-",
         sequence=Seq(sequences["chr2"][219:330]),  # 111 bp
         gene=gene2, genome=genome
     )
@@ -182,15 +182,15 @@ def complex_genome_structure(mock_seq_index):
     
     # Create exons
     exon1 = Exon(
-        id="EXON001", start=120, end=200, strand="+",
+        id="EXON001", chr="chr1", start=120, end=200, strand="+",
         transcript=transcript1, genome=genome
     )
     exon2 = Exon(
-        id="EXON002", start=300, end=380, strand="+",
+        id="EXON002", chr="chr1", start=300, end=380, strand="+",
         transcript=transcript1, genome=genome
     )
     exon3 = Exon(
-        id="EXON003", start=220, end=330, strand="-",
+        id="EXON003", chr="chr2", start=220, end=330, strand="-",
         transcript=transcript2, genome=genome
     )
     

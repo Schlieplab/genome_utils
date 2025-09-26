@@ -1,6 +1,5 @@
 from .locus import Locus
 from .genome_element import GenomeElement
-from abc import abstractmethod
 from typing import TYPE_CHECKING, Literal
 from Bio.Seq import Seq
 

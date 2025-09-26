@@ -27,6 +27,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -52,6 +53,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000002",
             name="PROTEIN_GENE",
+            chr="chr2",
             start=500,
             end=1000,
             strand="-",
@@ -74,6 +76,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000003",
             name="TEST_GENE3",
+            chr="chr3",
             start=1000,
             end=2000,
             strand="-",
@@ -93,6 +96,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -114,6 +118,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -134,6 +139,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -160,6 +166,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -178,6 +185,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="TEST_GENE",
+            chr="chr1",
             start=100,
             end=200,
             strand="-",
@@ -206,6 +214,7 @@ class TestGene:
         gene1 = Gene(
             id="SAME_ID",
             name="GENE1",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -216,6 +225,7 @@ class TestGene:
         gene2 = Gene(
             id="SAME_ID",
             name="GENE1",  # Same name
+            chr="chr1",
             start=100,     # Same coordinates
             end=200,
             strand="+",    # Same strand
@@ -226,6 +236,7 @@ class TestGene:
         gene3 = Gene(
             id="SAME_ID",
             name="GENE2",  # Different name (shouldn't matter)
+            chr="chr2",
             start=300,     # Different coordinates
             end=400,
             strand="-",    # Different strand
@@ -236,6 +247,7 @@ class TestGene:
         gene4 = Gene(
             id="DIFFERENT_ID",
             name="GENE1",
+            chr="chr1",
             start=100,
             end=200,
             strand="+",
@@ -256,6 +268,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000001",
             name="MULTI_TRANSCRIPT_GENE",
+            chr="chr1",
             start=1000,
             end=5000,
             strand="+",
@@ -279,6 +292,128 @@ class TestGene:
         # Genome should be marked as not indexed
         assert genome_mock.is_indexed == False
 
+    def test_gene_standalone_creation(self):
+        """Test creating a gene without chromosome or genome dependencies."""
+        gene = Gene(
+            id="ENSG00000001",
+            name="STANDALONE_GENE",
+            chr="chr1",
+            start=100,
+            end=200,
+            strand="+"
+        )
+        
+        assert gene.id == "ENSG00000001"
+        assert gene.name == "STANDALONE_GENE"
+        assert gene.chr == "chr1"
+        assert gene.start == 100
+        assert gene.end == 200
+        assert gene.strand == "+"
+        assert gene._parent is None
+        assert gene._genome is None
+        assert len(gene) == 101
+
+    def test_gene_standalone_with_kwargs(self):
+        """Test creating standalone gene with additional attributes."""
+        gene = Gene(
+            id="ENSG00000002",
+            name="PROTEIN_GENE",
+            chr="chr2",
+            start=500,
+            end=1000,
+            strand="-",
+            gene_type="protein_coding",
+            description="A standalone test gene",
+            score=95.5
+        )
+        
+        assert gene.gene_type == "protein_coding"
+        assert gene.description == "A standalone test gene"
+        assert gene.score == 95.5
+        assert gene._parent is None
+        assert gene._genome is None
+
+    def test_gene_standalone_sequence_property_fails(self):
+        """Test that sequence property fails gracefully for standalone gene."""
+        gene = Gene(
+            id="ENSG00000003",
+            name="STANDALONE_GENE",
+            chr="chr1",
+            start=100,
+            end=200,
+            strand="+"
+        )
+        
+        # Should raise an error since there's no chromosome to get sequence from
+        with pytest.raises(AttributeError):
+            _ = gene.sequence
+
+    def test_gene_standalone_transcripts_functionality(self):
+        """Test that transcript management works for standalone genes."""
+        gene = Gene(
+            id="ENSG00000004",
+            name="MULTI_TRANSCRIPT_GENE",
+            chr="chr1",
+            start=1000,
+            end=5000,
+            strand="+"
+        )
+        
+        # Initially empty
+        assert gene.transcripts == []
+        
+        # Can't add transcripts without genome (would cause error)
+        # But the transcripts property should work
+        assert len(gene.transcripts) == 0
+
+    def test_gene_standalone_get_chromosome_returns_none(self):
+        """Test that get_chromosome returns None for standalone gene."""
+        gene = Gene(
+            id="ENSG00000005",
+            name="STANDALONE_GENE",
+            chr="chr1",
+            start=100,
+            end=200,
+            strand="+"
+        )
+        
+        # Should return None since no parent is set
+        assert gene._parent is None
+
+    def test_gene_standalone_equality_and_hashing(self):
+        """Test equality and hashing for standalone genes."""
+        gene1 = Gene(
+            id="SAME_ID",
+            name="GENE1",
+            chr="chr1",
+            start=100,
+            end=200,
+            strand="+"
+        )
+        
+        gene2 = Gene(
+            id="SAME_ID",
+            name="GENE2",  # Different name shouldn't matter
+            chr="chr1",
+            start=100,
+            end=200,
+            strand="+"
+        )
+        
+        gene3 = Gene(
+            id="SAME_ID",
+            name="GENE1",
+            chr="chr1",
+            start=300,  # Different coordinates
+            end=400,
+            strand="+"
+        )
+        
+        assert gene1 == gene2  # Same ID and locus
+        assert gene1 != gene3  # Same ID but different locus
+        assert hash(gene1) == hash(gene2)
+        assert hash(gene1) != hash(gene3)
+
     def test_gene_with_negative_strand(self):
         """Test gene creation and properties with negative strand."""
         chromosome = self.create_mock_chromosome("chrX")
@@ -287,6 +422,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000X01",
             name="NEG_STRAND_GENE",
+            chr="chrX",
             start=10000,
             end=15000,
             strand="-",
@@ -310,6 +446,7 @@ class TestGene:
         gene = Gene(
             id="ENSG00000022",
             name="CHR22_GENE",
+            chr="chr22",
             start=100,
             end=200,
             strand="+",

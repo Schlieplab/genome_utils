@@ -6,14 +6,6 @@ from unittest.mock import Mock
 from GenomeUtils.Genome import Site, Locus, GenomeElement
 
 
-class ConcreteSite(Site):
-    """Concrete implementation of Site for testing purposes."""
-    
-    def get_site_type(self) -> str:
-        """Return the type of site."""
-        return "test_site"
-
-
 class TestSite:
     """Test cases for the Site class."""
 
@@ -22,7 +14,7 @@ class TestSite:
         genome_mock = Mock()
         parent_mock = Mock(spec=GenomeElement)
         
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -46,7 +38,7 @@ class TestSite:
 
     def test_site_initialization_with_minimal_params(self):
         """Test Site initialization with minimal required parameters."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr2",
             start=500,
             end=600,
@@ -65,7 +57,7 @@ class TestSite:
 
     def test_site_initialization_auto_id_generation(self):
         """Test that Site auto-generates ID from locus when not provided."""
-        site = ConcreteSite(
+        site = Site(
             chr="chrX",
             start=12345,
             end=12445,
@@ -78,7 +70,7 @@ class TestSite:
 
     def test_site_initialization_explicit_id_overrides_auto_generation(self):
         """Test that explicit ID overrides auto-generation."""
-        site = ConcreteSite(
+        site = Site(
             chr="chrY",
             start=1,
             end=100,
@@ -96,7 +88,7 @@ class TestSite:
 
     def test_site_locus_creation(self):
         """Test that Site correctly creates Locus object."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr3",
             start=2000,
             end=3000,
@@ -113,7 +105,7 @@ class TestSite:
     def test_site_invalid_coordinates_raises_error(self):
         """Test that invalid coordinates raise ValueError."""
         with pytest.raises(ValueError, match="Start coordinate cannot be greater than end coordinate"):
-            ConcreteSite(
+            Site(
                 chr="chr1",
                 start=2000,
                 end=1000,  # Invalid: start > end
@@ -124,7 +116,7 @@ class TestSite:
     def test_site_invalid_start_coordinate_raises_error(self):
         """Test that invalid start coordinate raises ValueError."""
         with pytest.raises(ValueError, match="Start coordinate cannot be less than 1"):
-            ConcreteSite(
+            Site(
                 chr="chr1",
                 start=0,  # Invalid: start < 1
                 end=1000,
@@ -134,7 +126,7 @@ class TestSite:
 
     def test_site_repr_method(self):
         """Test Site __repr__ method."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -143,12 +135,12 @@ class TestSite:
             id="test_site"
         )
         
-        expected = "ConcreteSite(id='test_site', locus=Locus(chr1:1000-2000, strand=+), sequence='ATCGATCGATCG')"
+        expected = "Site(id='test_site', locus=Locus(chr1:1000-2000, strand=+), sequence='ATCGATCGATCG')"
         assert repr(site) == expected
 
     def test_site_repr_method_with_auto_generated_id(self):
         """Test Site __repr__ method with auto-generated ID."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr2",
             start=500,
             end=600,
@@ -156,13 +148,13 @@ class TestSite:
             sequence="GGGG"
         )
         
-        expected = "ConcreteSite(id='chr2:500-600,-', locus=Locus(chr2:500-600, strand=-), sequence='GGGG')"
+        expected = "Site(id='chr2:500-600,-', locus=Locus(chr2:500-600, strand=-), sequence='GGGG')"
         assert repr(site) == expected
 
     def test_site_repr_method_with_long_sequence(self):
         """Test Site __repr__ method with long sequence."""
         long_sequence = "ATCGATCGATCG" * 10  # 120 characters
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -171,12 +163,12 @@ class TestSite:
             id="long_site"
         )
         
-        expected = f"ConcreteSite(id='long_site', locus=Locus(chr1:1000-2000, strand=+), sequence='{long_sequence}')"
+        expected = f"Site(id='long_site', locus=Locus(chr1:1000-2000, strand=+), sequence='{long_sequence}')"
         assert repr(site) == expected
 
     def test_site_inheritance_from_genome_element(self):
         """Test that Site properly inherits from GenomeElement."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -192,7 +184,7 @@ class TestSite:
 
     def test_site_kwargs_passed_to_parent(self):
         """Test that additional kwargs are passed to parent class."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -207,7 +199,7 @@ class TestSite:
 
     def test_site_empty_sequence(self):
         """Test Site with empty sequence."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=1000,  # Single position
@@ -222,7 +214,7 @@ class TestSite:
     def test_site_different_strand_values(self):
         """Test Site with different strand values."""
         # Positive strand
-        site_plus = ConcreteSite(
+        site_plus = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -232,7 +224,7 @@ class TestSite:
         assert site_plus.locus.strand == "+"
         
         # Negative strand
-        site_minus = ConcreteSite(
+        site_minus = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -244,28 +236,28 @@ class TestSite:
     def test_site_with_different_chromosome_formats(self):
         """Test Site with different chromosome naming formats."""
         # Numeric chromosome
-        site1 = ConcreteSite(chr="1", start=1000, end=2000, strand="+", sequence="ATCG")
+        site1 = Site(chr="1", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site1.locus.chr == "1"
         
         # Chr prefix
-        site2 = ConcreteSite(chr="chr1", start=1000, end=2000, strand="+", sequence="ATCG")
+        site2 = Site(chr="chr1", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site2.locus.chr == "chr1"
         
         # Sex chromosomes
-        site3 = ConcreteSite(chr="X", start=1000, end=2000, strand="+", sequence="ATCG")
+        site3 = Site(chr="X", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site3.locus.chr == "X"
         
-        site4 = ConcreteSite(chr="chrY", start=1000, end=2000, strand="+", sequence="ATCG")
+        site4 = Site(chr="chrY", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site4.locus.chr == "chrY"
         
         # Mitochondrial
-        site5 = ConcreteSite(chr="MT", start=1000, end=2000, strand="+", sequence="ATCG")
+        site5 = Site(chr="MT", start=1000, end=2000, strand="+", sequence="ATCG")
         assert site5.locus.chr == "MT"
 
 
     def test_site_sequence_attribute_access(self):
         """Test that sequence attribute can be accessed and modified."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -282,7 +274,7 @@ class TestSite:
 
     def test_site_with_none_values_for_optional_params(self):
         """Test Site initialization with explicit None values for optional parameters."""
-        site = ConcreteSite(
+        site = Site(
             chr="chr1",
             start=1000,
             end=2000,
@@ -297,14 +289,141 @@ class TestSite:
         assert site._parent is None
         assert site._genome is None
 
-    def test_site_abstract_method_implementation(self):
-        """Test that concrete implementations must implement abstract methods."""
-        site = ConcreteSite(
+
+    def test_site_standalone_creation(self):
+        """Test creating a site without parent or genome dependencies."""
+        site = Site(
             chr="chr1",
-            start=1000,
-            end=2000,
+            start=100,
+            end=107,
             strand="+",
-            sequence="ATCG"
+            sequence="ATCGATCG"
         )
         
-        assert site.get_site_type() == "test_site"
+        assert site.chr == "chr1"
+        assert site.start == 100
+        assert site.end == 107
+        assert site.strand == "+"
+        assert site.sequence == "ATCGATCG"
+        assert site._parent is None
+        assert site._genome is None
+        assert len(site) == 8
+
+    def test_site_standalone_with_custom_id(self):
+        """Test creating standalone site with custom ID."""
+        site = Site(
+            id="CUSTOM_SITE_001",
+            chr="chr2",
+            start=200,
+            end=207,
+            strand="-",
+            sequence="ATCGATCG"
+        )
+        
+        assert site.id == "CUSTOM_SITE_001"
+        assert site.chr == "chr2"
+        assert site.strand == "-"
+        assert site._parent is None
+        assert site._genome is None
+
+    def test_site_standalone_auto_id_generation(self):
+        """Test that site generates ID automatically when not provided."""
+        site = Site(
+            chr="chr3",
+            start=300,
+            end=307,
+            strand="+",
+            sequence="ATCGATCG"
+        )
+        
+        # ID should be auto-generated from locus
+        expected_id = "chr3:300-307,+"
+        assert site.id == expected_id
+
+    def test_site_standalone_with_kwargs(self):
+        """Test creating standalone site with additional attributes."""
+        site = Site(
+            chr="chr4",
+            start=400,
+            end=407,
+            strand="+",
+            sequence="ATCGATCG",
+            site_type="promoter",
+            confidence=0.95,
+            annotation="TATA box"
+        )
+        
+        assert site.site_type == "promoter"
+        assert site.confidence == 0.95
+        assert site.annotation == "TATA box"
+        assert site._parent is None
+        assert site._genome is None
+
+    def test_site_standalone_equality_and_hashing(self):
+        """Test equality and hashing for standalone sites."""
+        site1 = Site(
+            id="SAME_ID",
+            chr="chr1",
+            start=100,
+            end=107,
+            strand="+",
+            sequence="ATCGATCG"
+        )
+        
+        site2 = Site(
+            id="SAME_ID",
+            chr="chr1",
+            start=100,
+            end=107,
+            strand="+",
+            sequence="ATCGATCG"
+        )
+        
+        site3 = Site(
+            id="SAME_ID",
+            chr="chr1",
+            start=200,  # Different coordinates
+            end=207,
+            strand="+",
+            sequence="ATCGATCG"
+        )
+        
+        assert site1 == site2  # Same ID and locus
+        assert site1 != site3  # Same ID but different locus
+        assert hash(site1) == hash(site2)
+        assert hash(site1) != hash(site3)
+
+    def test_site_standalone_inheritance_from_genome_element(self):
+        """Test that standalone Site properly inherits from GenomeElement."""
+        site = Site(
+            chr="chr5",
+            start=500,
+            end=507,
+            strand="-",
+            sequence="ATCGATCG"
+        )
+        
+        # Should have GenomeElement properties
+        assert site.chr == "chr5"
+        assert site.start == 500
+        assert site.end == 507
+        assert site.strand == "-"
+        assert len(site) == 8
+        
+        # Should have proper repr
+        expected_repr = "Site(id='chr5:500-507,-', locus=Locus(chr5:500-507, strand=-), sequence='ATCGATCG')"
+        assert repr(site) == expected_repr
+
+    def test_site_standalone_sequence_property_works(self):
+        """Test that sequence property works correctly for standalone site."""
+        test_seq = "ATCGATCGATCGAAATTTGGGCCC"
+        site = Site(
+            chr="chr1",
+            start=1000,
+            end=1023,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        assert site.sequence == test_seq
+        assert str(site.sequence) == test_seq

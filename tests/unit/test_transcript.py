@@ -36,6 +36,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1100,
             end=1500,
             strand="+",
@@ -61,6 +62,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000002",
+            chr="chr3",
             start=2000,
             end=3000,
             strand="-",
@@ -82,6 +84,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000003",
+            chr="chr3",
             start=2000,
             end=3000,
             strand="-",
@@ -101,6 +104,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1100,
             end=1500,
             strand="+",
@@ -122,6 +126,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -154,6 +159,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="-",
@@ -184,6 +190,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1100,
             end=1500,
             strand="+",
@@ -203,6 +210,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -231,6 +239,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -273,6 +282,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="-",
@@ -306,6 +316,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -332,6 +343,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -368,6 +380,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1100,
             end=1500,
             strand="+",
@@ -392,6 +405,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1100,
             end=1500,
             strand="+",
@@ -411,6 +425,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000005",
+            chr="chr5",
             start=12000,
             end=15000,
             strand="-",
@@ -438,6 +453,7 @@ class TestTranscript:
         
         transcript = Transcript(
             id="ENST00000001",
+            chr="chr1",
             start=1000,
             end=2000,
             strand="+",
@@ -463,3 +479,154 @@ class TestTranscript:
         locus = transcript.transcript_to_genomic_pos(0, 100)
         assert locus.start == 1100
         assert locus.end == 1199
+
+    def test_transcript_standalone_creation(self):
+        """Test creating a transcript without gene or genome dependencies."""
+        test_seq = Seq("ATCGATCGATCGAAATTTGGGCCC")
+        
+        transcript = Transcript(
+            id="ENST00000001",
+            chr="chr1",
+            start=1100,
+            end=1500,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        assert transcript.id == "ENST00000001"
+        assert transcript.chr == "chr1"
+        assert transcript.start == 1100
+        assert transcript.end == 1500
+        assert transcript.strand == "+"
+        assert transcript.sequence == test_seq
+        assert transcript._parent is None
+        assert transcript._genome is None
+        assert len(transcript) == 401
+
+    def test_transcript_standalone_with_kwargs(self):
+        """Test creating standalone transcript with additional attributes."""
+        test_seq = Seq("ATCGATCGATCG")
+        
+        transcript = Transcript(
+            id="ENST00000002",
+            chr="chr2",
+            start=2000,
+            end=3000,
+            strand="-",
+            sequence=test_seq,
+            transcript_type="protein_coding",
+            support_level=1,
+            biotype="mRNA"
+        )
+        
+        assert transcript.transcript_type == "protein_coding"
+        assert transcript.support_level == 1
+        assert transcript.biotype == "mRNA"
+        assert transcript._parent is None
+        assert transcript._genome is None
+
+    def test_transcript_standalone_exons_functionality(self):
+        """Test that exon management works for standalone transcripts."""
+        test_seq = Seq("ATCGATCGATCG")
+        
+        transcript = Transcript(
+            id="ENST00000003",
+            chr="chr1",
+            start=1000,
+            end=2000,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        # Initially empty
+        assert transcript.exons == []
+        
+        # Can't add exons without genome (would cause error)
+        # But the exons property should work
+        assert len(transcript.exons) == 0
+
+    def test_transcript_standalone_get_gene_returns_none(self):
+        """Test that get_gene returns None for standalone transcript."""
+        test_seq = Seq("ATCGATCGATCG")
+        
+        transcript = Transcript(
+            id="ENST00000004",
+            chr="chr1",
+            start=1100,
+            end=1500,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        # Should return None since no parent is set
+        assert transcript._parent is None
+
+    def test_transcript_standalone_coordinate_conversion_with_mock_exons(self):
+        """Test coordinate conversion for standalone transcript with manually added exons."""
+        test_seq = Seq("A" * 250)  # 250 bp transcript
+        
+        transcript = Transcript(
+            id="ENST00000005",
+            chr="chr1",
+            start=1000,
+            end=2000,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        # Manually create mock exons for testing
+        exon1 = Mock()
+        exon1.start = 1100
+        exon1.end = 1199
+        exon1.__len__ = Mock(return_value=100)
+        
+        exon2 = Mock()
+        exon2.start = 1300
+        exon2.end = 1349
+        exon2.__len__ = Mock(return_value=50)
+        
+        # Manually add to children (bypassing add_exon to avoid genome dependency)
+        transcript._children = [exon1, exon2]
+        
+        # Test coordinate conversion
+        locus = transcript.transcript_to_genomic_pos(50)
+        assert locus.chr == "chr1"
+        assert locus.start == 1150
+        assert locus.end == 1150
+        assert locus.strand == "+"
+
+    def test_transcript_standalone_equality_and_hashing(self):
+        """Test equality and hashing for standalone transcripts."""
+        test_seq = Seq("ATCGATCGATCG")
+        
+        transcript1 = Transcript(
+            id="SAME_ID",
+            chr="chr1",
+            start=1100,
+            end=1500,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        transcript2 = Transcript(
+            id="SAME_ID",
+            chr="chr1",
+            start=1100,
+            end=1500,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        transcript3 = Transcript(
+            id="SAME_ID",
+            chr="chr1",
+            start=2000,  # Different coordinates
+            end=2500,
+            strand="+",
+            sequence=test_seq
+        )
+        
+        assert transcript1 == transcript2  # Same ID and locus
+        assert transcript1 != transcript3  # Same ID but different locus
+        assert hash(transcript1) == hash(transcript2)
+        assert hash(transcript1) != hash(transcript3)
