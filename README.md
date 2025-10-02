@@ -43,7 +43,7 @@ print(files)  # { 'dna': Path(...), 'cdna': Path(...), 'annotation': Path(...) }
 # Build genome from downloaded files
 # The builder automatically uses species-appropriate chromosomes:
 # Human: 1-22,X,Y,M,MT | Mouse: 1-19,X,Y,M,MT
-genome = (
+genome, scaffold_genome = (
     GenomeBuilder(id="GRCh38", species="Homo sapiens", name="Human")
       .with_dna_fasta(files['dna'])
       .with_cdna_fasta(files['cdna'])
@@ -84,7 +84,7 @@ builder = GenomeBuilder(
 # Optional: limit to specific chromosomes (must be called before with_dna_fasta)
 builder.set_chromosome_filter(["chr1", "chr2", "chrX"])  # or ["1","2","X"]
 
-genome = (
+genome, _ = (
     builder
       .with_dna_fasta(dna_fasta)
       .with_cdna_fasta(cdna_fasta)
@@ -150,14 +150,14 @@ from GenomeUtils.Downloaders import EnsemblGenomeDownloader
 from GenomeUtils.Genome import GenomeBuilder
 
 # Human genome (uses chromosomes 1-22, X, Y, M, MT)
-human_genome = GenomeBuilder(
+human_genome, _ = GenomeBuilder(
     id="GRCh38", 
     species="Homo sapiens", 
     name="Human Reference Genome"
 ).with_dna_fasta(human_dna).with_gtf_file(human_gtf).build()
 
 # Mouse genome (uses chromosomes 1-19, X, Y, M, MT)  
-mouse_genome = GenomeBuilder(
+mouse_genome, _ = GenomeBuilder(
     id="GRCm39", 
     species="Mus musculus", 
     name="Mouse Reference Genome"
@@ -165,7 +165,7 @@ mouse_genome = GenomeBuilder(
 
 
 # Override default chromosomes if needed
-custom_genome = GenomeBuilder(
+custom_genome, _ = GenomeBuilder(
     id="custom", 
     species="Custom species", 
     name="Custom Genome",
@@ -173,13 +173,6 @@ custom_genome = GenomeBuilder(
 ).with_dna_fasta(custom_dna).with_gtf_file(custom_gtf).build()
 ```
 
-## Testing
-
-```bash
-pytest -q
-```
-
-Integration tests that use real files are marked and may be slower.
 
 ## Project status
 
