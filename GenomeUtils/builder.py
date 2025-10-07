@@ -216,7 +216,18 @@ class GenomeBuilder:
 
         if gtf_db_path.exists():
             self.logger.info(f"Loading existing gffutils database: {gtf_db_path}")
-            db = gffutils.FeatureDB(str(gtf_db_path))
+            try:
+                db = gffutils.FeatureDB(str(gtf_db_path))
+            except Exception as e:
+                self.logger.warning(f"Error loading existing gffutils database: {e}. Creating new database.")
+                gtf_db_path.unlink()
+                db = gffutils.create_db(str(gtf_path), 
+                                        dbfn=str(gtf_db_path), 
+                                        keep_order=False, 
+                                        merge_strategy='error', 
+                                        id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'}, 
+                                        disable_infer_genes=True, 
+                                        disable_infer_transcripts=True)
         else:
             self.logger.info(f"Database not found. Creating new database at: {gtf_db_path}")
             gtf_file_to_use = gtf_path
@@ -364,9 +375,6 @@ class GenomeBuilder:
     def build(self) -> Genome | tuple[Genome, Genome]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
-        
-        Args:
-            pickle_genome: If True, saves the final genome object(s) to a pickle file.
         """
         if not self._genes_map:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
