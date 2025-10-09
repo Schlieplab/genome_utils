@@ -6,8 +6,22 @@ build-backend = "setuptools.build_meta"
 name = "GenomeUtils"
 version = "0.1.0"
 description = "An object-oriented Python library for working with genomic data."
+authors = [
+    {name="Seyedarash Ayatollahi", email="seyedarash.ayatollahi@b-tu.de"},
+]
+maintainers = [
+    {name="Nathalie Gocht", email="nathalie.gocht@b-tu.de"}
+]
 readme = "README.md"
 requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3+)"
+]
+license = "LGPLv3+"
+license-files = ["COPYING*"]
 
 dependencies = [
     "gffutils>=0.13,<0.14",
