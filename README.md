@@ -183,3 +183,4 @@ Early-stage library. APIs may evolve.
 
 Issues and PRs are welcome.
 
+Copyright 2025, Alexander Schliep
