@@ -3,7 +3,7 @@
 Filename: test_transcript.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 1.0
+Version: 0.1.0
 Description: Unit tests for the Transcript class.
 License: LGPL-3.0-or-later
 """

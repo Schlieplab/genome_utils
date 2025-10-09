@@ -3,7 +3,7 @@
 Filename: genome_downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 1.0
+Version: 0.1.0
 Description: This file defines the abstract base class for genome downloaders.
 License: LGPL-3.0-or-later
 """
