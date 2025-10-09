@@ -2,16 +2,18 @@
 """
 Filename: test_transcript.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Unit tests for the Transcript class.
+License: LGPL-3.0-or-later
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from Bio.Seq import Seq
 
-from GenomeUtils.Genome import Transcript, Locus
+from GenomeUtils.Genome import Locus, Transcript
 
 
 class TestTranscript:

@@ -2,16 +2,21 @@
 """
 Filename: genome_element.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the abstract base class for all genome elements.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
+
 from Bio.Seq import Seq
+
 from .locus import Locus
+
 
 if TYPE_CHECKING:
     from .genome import Genome

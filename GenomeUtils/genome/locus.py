@@ -2,14 +2,17 @@
 """
 Filename: locus.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the Locus class, representing a genomic location.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal
+
 
 @dataclass(frozen=True, order=True)
 class Locus:

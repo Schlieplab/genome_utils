@@ -2,14 +2,16 @@
 """
 Filename: test_ensembl_genome_downloader.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Unit tests for the EnsemblGenomeDownloader class.
+License: LGPL-3.0-or-later
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 from GenomeUtils.Downloaders import EnsemblGenomeDownloader
 

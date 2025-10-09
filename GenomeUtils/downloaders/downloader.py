@@ -2,18 +2,20 @@
 """
 Filename: downloader.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the base Downloader class for handling file downloads.
+License: LGPL-3.0-or-later
 """
 
-from typing import Optional, Set
-from pathlib import Path
-import tempfile
-import shutil
-import requests
-import logging
 from abc import ABC
+import logging
+from pathlib import Path
+import shutil
+import tempfile
+from typing import Optional, Set
+
+import requests
 
 
 class Downloader(ABC):

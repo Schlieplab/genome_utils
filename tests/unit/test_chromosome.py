@@ -2,17 +2,16 @@
 """
 Filename: test_chromosome.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Unit tests for the Chromosome class.
+License: LGPL-3.0-or-later
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-from Bio import SeqIO
-from typing import List
 
 from GenomeUtils.Genome import Chromosome, Locus
 

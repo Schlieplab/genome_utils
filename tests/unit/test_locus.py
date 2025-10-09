@@ -2,12 +2,14 @@
 """
 Filename: test_locus.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Unit tests for the Locus class.
+License: LGPL-3.0-or-later
 """
 
 import pytest
+
 from GenomeUtils.Genome import Locus
 
 

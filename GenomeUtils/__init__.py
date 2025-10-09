@@ -2,13 +2,15 @@
 """
 Filename: __init__.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file is the initialization file for the GenomeUtils package.
+License: LGPL-3.0-or-later
 """
 
-from . import Genome
+
 from . import Downloaders
+from . import Genome
 
 __all__ = [
     "Genome",

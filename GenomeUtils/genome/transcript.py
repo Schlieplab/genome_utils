@@ -2,16 +2,21 @@
 """
 Filename: transcript.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the Transcript class, representing a biological transcript.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
-from typing import List, Tuple, TYPE_CHECKING, Optional, Union
+
+from typing import List, Optional, Tuple, TYPE_CHECKING, Union
+
 from Bio.Seq import Seq
+
 from .genome_element import GenomeElement
 from .locus import Locus
+
 
 if TYPE_CHECKING:
     from .exon import Exon

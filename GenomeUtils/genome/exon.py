@@ -2,16 +2,21 @@
 """
 Filename: exon.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the Exon class, representing a biological exon.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Literal
+
+from typing import Literal, TYPE_CHECKING
+
+from Bio.Seq import Seq
+
 from .genome_element import GenomeElement
 from .locus import Locus
-from Bio.Seq import Seq
+
 
 if TYPE_CHECKING:
     from .transcript import Transcript

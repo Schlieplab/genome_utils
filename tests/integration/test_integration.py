@@ -2,18 +2,18 @@
 """
 Filename: test_integration.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Integration tests for the genome_utils package.
+License: LGPL-3.0-or-later
 """
 
-import pytest
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
-from GenomeUtils.Genome import Genome
-from GenomeUtils.Genome import GenomeBuilder
+import pytest
+
+from GenomeUtils.Genome import Genome, GenomeBuilder
 
 
 class TestIntegration:

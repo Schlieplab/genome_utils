@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-"""Pytest configuration and fixtures for genome_utils tests."""
+"""
+Filename: __init__.py
+Author: Arash Ayat
+Copyright: 2025, Alexander Schliep
+Version: 1.0
+Description: Configuration and fixtures for genome_utils tests.
+License: LGPL-3.0-or-later
+"""
 
 import pytest
 import tempfile

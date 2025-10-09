@@ -2,19 +2,23 @@
 """
 Filename: genome.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the main Genome class, encapsulating chromosomes, genes, and transcripts.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
+
 from typing import Dict, List
+
 from Bio.Seq import Seq
+
 from .chromosome import Chromosome
-from .gene import Gene
-from .transcript import Transcript
 from .exon import Exon
+from .gene import Gene
 from .locus import Locus
+from .transcript import Transcript
 
 
 class Genome:

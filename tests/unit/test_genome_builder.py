@@ -2,23 +2,19 @@
 """
 Filename: test_genome_builder.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: Unit tests for the GenomeBuilder class.
+License: LGPL-3.0-or-later
 """
 
-import pytest
-import tempfile
 import gzip
-from pathlib import Path
 from unittest.mock import Mock, patch
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
+import pytest
 
-from GenomeUtils.Genome import GenomeBuilder
-from GenomeUtils.Genome import Genome
 from GenomeUtils.genome.builder import BuilderStateError, _strip_version
+from GenomeUtils.Genome import Genome, GenomeBuilder
 
 
 class TestGenomeBuilder:

@@ -2,32 +2,32 @@
 """
 Filename: builder.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file contains the GenomeBuilder class for constructing genome objects.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
+
+import gzip
+import json
+import logging
+import shutil
 from pathlib import Path
 from typing import Dict, Optional
+
+import gffutils
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-import gffutils
-import logging
-import gzip
-import shutil
-from io import StringIO
-import time
-import pickle
-import json
 from tqdm import tqdm
-from .genome import Genome
+
 from .chromosome import Chromosome
-from .gene import Gene
-from .transcript import Transcript
 from .exon import Exon
-from .locus import Locus
+from .gene import Gene
+from .genome import Genome
+from .transcript import Transcript
 
 
 def _get_default_chromosomes_for_species(species: str) -> set[str]:

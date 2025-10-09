@@ -2,16 +2,21 @@
 """
 Filename: gene.py
 Author: Arash Ayat
-Copyright: Alexander Schliep
+Copyright: 2025, Alexander Schliep
 Version: 1.0
 Description: This file defines the Gene class, representing a biological gene.
+License: LGPL-3.0-or-later
 """
 
 from __future__ import annotations
-from typing import List, TYPE_CHECKING, Literal
+
+from typing import List, Literal, TYPE_CHECKING
+
 from Bio.Seq import Seq
+
 from .genome_element import GenomeElement
 from .locus import Locus
+
 
 if TYPE_CHECKING:
     from .chromosome import Chromosome
