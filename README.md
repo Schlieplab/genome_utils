@@ -106,11 +106,7 @@ print(genome.gene_by_id(first_gene.id))
 ```python
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from GenomeUtils.genome import Genome
-from GenomeUtils.chromosome import Chromosome
-from GenomeUtils.gene import Gene
-from GenomeUtils.transcript import Transcript
-from GenomeUtils.exon import Exon
+from GenomeUtils.Genome import Genome, Chromosome, Gene, Transcript, Exon
 
 # Create a tiny in-memory genome
 genome = Genome(id="toy", species="Test species", name="Toy Genome")
@@ -135,7 +131,6 @@ transcript = Transcript(
 
 gene.add_transcript(transcript)
 
-from GenomeUtils.exon import Exon
 transcript.add_exon(Exon(id="EXON001", chr=chromosome, start=5, end=15, strand='+', transcript=transcript, genome=genome))
 transcript.add_exon(Exon(id="EXON002", chr=chromosome, start=25, end=35, strand='+', transcript=transcript, genome=genome))
 
