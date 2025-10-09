@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: genome.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the main Genome class, encapsulating chromosomes, genes, and transcripts.
+"""
+
 from __future__ import annotations
 from typing import Dict, List
 from Bio.Seq import Seq

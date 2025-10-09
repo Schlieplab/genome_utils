@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the Locus class."""
+"""
+Filename: test_locus.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the Locus class.
+"""
 
 import pytest
 from GenomeUtils.Genome import Locus

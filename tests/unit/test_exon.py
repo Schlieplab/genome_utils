@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the Exon class."""
+"""
+Filename: test_exon.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the Exon class.
+"""
 
 import pytest
 from unittest.mock import Mock

@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the GenomeElement base class."""
+"""
+Filename: test_genome_element.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the GenomeElement base class.
+"""
 
 import pytest
 from unittest.mock import Mock

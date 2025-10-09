@@ -1,5 +1,12 @@
 #!/usr/bin/env python
-# This file supports the import syntax: from GenomeUtils.Genome import Genome, Gene
+"""
+Filename: Genome.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the main Genome class and related functionalities.
+"""
+
 from .genome.genome import Genome
 from .genome.gene import Gene
 from .genome.transcript import Transcript

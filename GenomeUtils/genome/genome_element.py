@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: genome_element.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the abstract base class for all genome elements.
+"""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING

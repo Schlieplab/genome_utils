@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: builder.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file contains the GenomeBuilder class for constructing genome objects.
+"""
+
 from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Optional

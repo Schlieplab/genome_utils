@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: exon.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the Exon class, representing a biological exon.
+"""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 from .genome_element import GenomeElement

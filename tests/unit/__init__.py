@@ -1,2 +1,8 @@
 #!/usr/bin/env python
-# Unit tests for genome_utils
+"""
+Filename: __init__.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Initialization file for unit tests.
+"""

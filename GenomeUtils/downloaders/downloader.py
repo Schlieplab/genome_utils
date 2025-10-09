@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: downloader.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the base Downloader class for handling file downloads.
+"""
+
 from typing import Optional, Set
 from pathlib import Path
 import tempfile

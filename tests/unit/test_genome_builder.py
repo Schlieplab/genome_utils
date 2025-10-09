@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the GenomeBuilder class."""
+"""
+Filename: test_genome_builder.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the GenomeBuilder class.
+"""
 
 import pytest
 import tempfile

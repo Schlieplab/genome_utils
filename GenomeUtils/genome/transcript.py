@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: transcript.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the Transcript class, representing a biological transcript.
+"""
+
 from __future__ import annotations
 from typing import List, Tuple, TYPE_CHECKING, Optional, Union
 from Bio.Seq import Seq

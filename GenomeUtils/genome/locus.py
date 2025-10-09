@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: locus.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the Locus class, representing a genomic location.
+"""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal

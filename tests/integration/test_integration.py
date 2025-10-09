@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Integration tests for the genome_utils package."""
+"""
+Filename: test_integration.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Integration tests for the genome_utils package.
+"""
 
 import pytest
 import tempfile

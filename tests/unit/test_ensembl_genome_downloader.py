@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the EnsemblGenomeDownloader class."""
+"""
+Filename: test_ensembl_genome_downloader.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the EnsemblGenomeDownloader class.
+"""
 
 import pytest
 from pathlib import Path

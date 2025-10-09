@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: genome_downloader.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the abstract base class for genome downloaders.
+"""
+
 from __future__ import annotations
 from pathlib import Path
 import logging

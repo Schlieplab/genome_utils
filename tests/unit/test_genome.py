@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the Genome class."""
+"""
+Filename: test_genome.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the Genome class.
+"""
 
 import pytest
 from unittest.mock import Mock

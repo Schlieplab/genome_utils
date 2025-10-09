@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: chromosome.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the Chromosome class, representing a biological chromosome.
+"""
+
 from __future__ import annotations
 from typing import List, TYPE_CHECKING
 from Bio import SeqIO

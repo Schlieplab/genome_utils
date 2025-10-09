@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+Filename: gene.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: This file defines the Gene class, representing a biological gene.
+"""
+
 from __future__ import annotations
 from typing import List, TYPE_CHECKING, Literal
 from Bio.Seq import Seq

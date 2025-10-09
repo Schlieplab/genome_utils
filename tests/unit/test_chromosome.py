@@ -1,11 +1,18 @@
 #!/usr/bin/env python
-"""Tests for the Chromosome class."""
+"""
+Filename: test_chromosome.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the Chromosome class.
+"""
 
 import pytest
 from unittest.mock import Mock
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+from typing import List
 
 from GenomeUtils.Genome import Chromosome, Locus
 

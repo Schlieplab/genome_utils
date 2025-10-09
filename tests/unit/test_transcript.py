@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Tests for the Transcript class."""
+"""
+Filename: test_transcript.py
+Author: Arash Ayat
+Copyright: Alexander Schliep
+Version: 1.0
+Description: Unit tests for the Transcript class.
+"""
 
 import pytest
 from unittest.mock import Mock
