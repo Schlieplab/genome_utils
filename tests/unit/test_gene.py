@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Filename: test_gene.py
+Filename: tests/unit/test_gene.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
 Version: 0.1.0

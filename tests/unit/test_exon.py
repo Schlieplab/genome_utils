@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Filename: test_exon.py
+Filename: tests/unit/test_exon.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
 Version: 0.1.0

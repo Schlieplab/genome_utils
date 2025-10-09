@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Filename: genome.py
+Filename: GenomeUtils/genome/genome.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
 Version: 0.1.0

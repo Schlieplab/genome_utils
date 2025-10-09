@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Filename: __init__.py
+Filename: tests/integration/__init__.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
 Version: 0.1.0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Filename: genome_downloader.py
+Filename: GenomeUtils/downloaders/genome_downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
 Version: 0.1.0
