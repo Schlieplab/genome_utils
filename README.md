@@ -67,7 +67,7 @@ print(genome.gene_by_id(first_gene.id))
 
 ```python
 from pathlib import Path
-from GenomeUtils.builder import GenomeBuilder
+from GenomeUtils.Genome import GenomeBuilder
 
 # Prepare input files (can be .gz):
 dna_fasta = Path("/path/to/genome.dna.fa.gz")
