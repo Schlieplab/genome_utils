@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from typing import Optional, Set
 from pathlib import Path
 import tempfile

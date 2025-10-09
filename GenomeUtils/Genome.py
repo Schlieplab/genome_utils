@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This file supports the import syntax: from GenomeUtils.Genome import Genome, Gene
 from .genome.genome import Genome
 from .genome.gene import Gene

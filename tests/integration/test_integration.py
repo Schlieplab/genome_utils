@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Integration tests for the genome_utils package."""
 
 import pytest

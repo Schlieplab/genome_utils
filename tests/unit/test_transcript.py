@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Tests for the Transcript class."""
 
 import pytest

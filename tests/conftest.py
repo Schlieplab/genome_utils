@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Pytest configuration and fixtures for genome_utils tests."""
 
 import pytest
