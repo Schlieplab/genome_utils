@@ -19,3 +19,10 @@ The :doc:`API reference <api/index>` contains detailed documentation for every p
    :caption: API Reference
 
    api/index
+
+.. toctree::
+   :maxdepth: 0
+   :caption: Project Info
+
+   license
+   contributors

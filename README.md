@@ -17,7 +17,7 @@ You can install GenomeUtils via pip with the following command:
 pip install GenomeUtils
 ```
 
-Requires Python >= 3.8. Dependencies that will be installed automatically by pip are: `biopython`, `gffutils`, `requests`, `gget`.
+Requires Python >= 3.10. Dependencies that will be installed automatically by pip are: `biopython`, `gffutils`, `requests`, `gget`.
 
 ## Quickstart
 
