@@ -170,9 +170,9 @@ custom_genome, _ = GenomeBuilder(
 ```
 
 
-## Project status
+## Technical Documentation
 
-Early-stage library. APIs may evolve.
+Find the technical documentation [here](https://schlieplab.github.io/genome_utils/). APIs may evolve.
 
 ## Contributing
 
