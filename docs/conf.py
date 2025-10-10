@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 project = "GenomeUtils"
 author = "Schlieplab"
+copyright = f"{datetime.now().year}, Alexander Schliep"
 
 release = ""
 pyproject_path = PROJECT_ROOT / "pyproject.toml"
@@ -63,3 +64,27 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_last_updated_fmt = "%Y-%m-%d"
 html_title = "GenomeUtils Documentation"
+
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": 4,
+}
+
+html_context = {
+    "display_github": True,
+    "github_user": "Schlieplab",
+    "github_repo": "genome_utils",
+    "github_version": "master",
+    "conf_py_path": "/docs/",
+}
+
+
+def _strip_module_docstring(app, what, name, obj, options, lines):
+    if what == "module":
+        lines[:] = []
+        if hasattr(obj, "__doc__"):
+            obj.__doc__ = None
+
+
+def setup(app):
+    app.connect("autodoc-process-docstring", _strip_module_docstring)

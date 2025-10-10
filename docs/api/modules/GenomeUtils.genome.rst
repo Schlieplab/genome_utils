@@ -6,15 +6,14 @@
    
 .. rubric:: Modules
 
-.. autosummary::
-   :toctree:
-   :recursive:
+.. toctree::
+   :maxdepth: 1
 
-   builder
-   chromosome
-   exon
-   gene
-   genome
-   genome_element
-   locus
-   transcript
+   GenomeUtils.genome.builder
+   GenomeUtils.genome.chromosome
+   GenomeUtils.genome.exon
+   GenomeUtils.genome.gene
+   GenomeUtils.genome.genome
+   GenomeUtils.genome.genome_element
+   GenomeUtils.genome.locus
+   GenomeUtils.genome.transcript

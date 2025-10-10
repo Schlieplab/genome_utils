@@ -1,5 +1,5 @@
-GenomeUtils documentation
-==========================
+`GenomeUtils <https://github.com/Schlieplab/genome_utils>`_ documentation
+==============================================================================
 
 Welcome to the official documentation for the :mod:`GenomeUtils` library. This site covers
 installation, tutorials, architecture concepts, and the full API reference for building
@@ -19,3 +19,10 @@ The :doc:`API reference <api/index>` contains detailed documentation for every p
    :caption: API Reference
 
    api/index
+
+.. toctree::
+   :maxdepth: 0
+   :caption: Project Info
+
+   license
+   contributors
