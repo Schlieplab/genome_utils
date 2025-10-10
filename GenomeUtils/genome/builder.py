@@ -75,12 +75,14 @@ class GenomeBuilder:
     and gene annotations from standard bioinformatics files.
 
     The correct order of operations is:
+
     1. with_dna_fasta()
     2. with_cdna_fasta()
     3. with_gtf_file()
     4. build()
 
-    Example:
+    Example::
+
         builder = GenomeBuilder(id="hg38", species="homo_sapiens", name="Human Reference Genome")
         genome = (
             builder.with_dna_fasta(Path("path/to/dna.fa"))
