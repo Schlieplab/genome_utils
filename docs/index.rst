@@ -3,7 +3,7 @@ GenomeUtils documentation
 
 Welcome to the official documentation for the :mod:`GenomeUtils` library. This site covers
 installation, tutorials, architecture concepts, and the full API reference for building
-object-oriented representations of genomic data.
+object-oriented representations of annotated genomes.
 
 If you're new to the project, start with the :doc:`Getting Started <getting-started>` guide.
 The :doc:`API reference <api/index>` contains detailed documentation for every public module.
