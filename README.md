@@ -1,6 +1,6 @@
 # GenomeUtils
 
-A Python library for working with genomic data.
+A Python library for working with annotated genomes. We developed GenomeUtils as an alternative/replacement for the no longer maintained pyensembl.
 
 Object-oriented model for representing genomic features: genomes, chromosomes, genes, transcripts, and exons.
 
