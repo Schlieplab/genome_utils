@@ -492,3 +492,89 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         assert len(transcript.exons) == 2
         assert transcript.exons[0].id == "EXON001"
         assert transcript.exons[1].id == "EXON002"
+        
+        # Verify exon-transcript relationship
+        exon1 = transcript.exons[0]
+        exon2 = transcript.exons[1]
+        assert transcript in exon1.get_transcripts()
+        assert transcript in exon2.get_transcripts()
+        
+        # Verify exon-gene relationship
+        assert exon1.get_gene() == gene
+        assert exon2.get_gene() == gene
+
+    @pytest.mark.integration
+    def test_exon_shared_across_transcripts(self, temp_dir):
+        """Test that exons can be shared across multiple transcripts (alternative splicing)."""
+        # Create test files with alternative transcripts sharing exons
+        fasta_content = """>chr1
+ATCGATCGATCGAAATTTGGGCCCTTTTAAAACCCCGGGGTTTTAAAACCCCGGGG
+"""
+        cdna_content = """>TRANS001
+ATCGATCGATCGAAATTTGGGCCCTTTTAAAACCCCGGGG
+>TRANS002
+ATCGATCGATCGAAATTTAAAACCCCGGGG
+"""
+        # Two transcripts of the same gene sharing EXON001
+        gtf_content = """chr1	test	gene	10	50	.	+	.	gene_id "GENE001"; gene_name "TEST_GENE";
+chr1	test	transcript	15	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001";
+chr1	test	exon	15	25	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id "EXON001";
+chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id "EXON002";
+chr1	test	transcript	15	40	.	+	.	gene_id "GENE001"; transcript_id "TRANS002";
+chr1	test	exon	15	25	.	+	.	gene_id "GENE001"; transcript_id "TRANS002"; exon_id "EXON001";
+chr1	test	exon	30	40	.	+	.	gene_id "GENE001"; transcript_id "TRANS002"; exon_id "EXON003";
+"""
+        
+        fasta_file = temp_dir / "test.fa"
+        fasta_file.write_text(fasta_content)
+        cdna_file = temp_dir / "cdna.fa"
+        cdna_file.write_text(cdna_content)
+        gtf_file = temp_dir / "test.gtf"
+        gtf_file.write_text(gtf_content)
+        
+        # Build genome
+        builder = GenomeBuilder(
+            id="test_genome",
+            species="Homo sapiens",
+            name="Test Genome",
+            separate_scaffolds=False
+        )
+        
+        genome = (builder
+                 .set_chromosome_filter(["chr1"])
+                 .with_dna_fasta(fasta_file)
+                 .with_cdna_fasta(cdna_file)
+                 .with_gtf_file(gtf_file)
+                 .build())
+        
+        # Get the gene and transcripts
+        gene = genome.gene_by_id("GENE001")
+        assert len(gene.transcripts) == 2
+        
+        transcript1 = genome.transcript_by_id("TRANS001")
+        transcript2 = genome.transcript_by_id("TRANS002")
+        
+        # Get EXON001 which should be shared
+        exon001 = genome.exon_by_id("EXON001")
+        
+        # EXON001 should be in both transcripts
+        assert exon001 in transcript1.exons
+        assert exon001 in transcript2.exons
+        
+        # EXON001 should have both transcripts in its transcripts list
+        assert len(exon001.get_transcripts()) == 2
+        assert transcript1 in exon001.get_transcripts()
+        assert transcript2 in exon001.get_transcripts()
+        
+        # Both transcripts should have the same gene
+        assert exon001.get_gene() == gene
+        
+        # Verify other exons are specific to their transcripts
+        exon002 = genome.exon_by_id("EXON002")
+        exon003 = genome.exon_by_id("EXON003")
+        
+        assert len(exon002.get_transcripts()) == 1
+        assert transcript1 in exon002.get_transcripts()
+        
+        assert len(exon003.get_transcripts()) == 1
+        assert transcript2 in exon003.get_transcripts()

@@ -80,7 +80,7 @@ class TestIntegration:
         
         # Test transcript -> exon relationship
         assert exon1 in transcript1.exons
-        assert exon1.get_transcript() == transcript1
+        assert transcript1 in exon1.get_transcripts()
 
     @pytest.mark.integration
     def test_sequence_retrieval(self, complex_genome_structure):

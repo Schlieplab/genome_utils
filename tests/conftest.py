@@ -113,10 +113,11 @@ def sample_exon(sample_transcript):
     
     exon = Exon(
         id="ENSE00000001",
+        chr="chr1",
         start=1150,
         end=1250,
         strand="+",
-        transcript=sample_transcript,
+        transcripts=[sample_transcript],
         genome=genome_mock,
         exon_number=1
     )
@@ -191,15 +192,15 @@ def complex_genome_structure(mock_seq_index):
     # Create exons
     exon1 = Exon(
         id="EXON001", chr="chr1", start=120, end=200, strand="+",
-        transcript=transcript1, genome=genome
+        transcripts=[transcript1], genome=genome
     )
     exon2 = Exon(
         id="EXON002", chr="chr1", start=300, end=380, strand="+",
-        transcript=transcript1, genome=genome
+        transcripts=[transcript1], genome=genome
     )
     exon3 = Exon(
         id="EXON003", chr="chr2", start=220, end=330, strand="-",
-        transcript=transcript2, genome=genome
+        transcripts=[transcript2], genome=genome
     )
     
     transcript1.add_exon(exon1)

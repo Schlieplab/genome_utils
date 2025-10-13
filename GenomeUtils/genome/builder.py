@@ -360,7 +360,8 @@ class GenomeBuilder:
         
         count_query = "SELECT count(*) FROM features WHERE featuretype = 'exon'"
         total_exons = db.conn.execute(count_query).fetchone()[0]
-
+        exons_map: Dict[str, Exon] = {}
+        
         for e_id, seqid, start, end, strand, attributes_json in tqdm(db.conn.execute(query), total=total_exons, desc="Creating exons"):
             if self._chromosome_filter and seqid not in self._chromosome_filter:
                 continue
@@ -369,17 +370,21 @@ class GenomeBuilder:
 
             transcript_id = attributes.pop('transcript_id', [None])[0]
             exon_id = attributes.pop('exon_id', [e_id])[0]
-            
+
             attributes = {k: v for k, v in attributes.items() 
                             if not (k.startswith('transcript') or k.startswith('gene'))}
             attributes = {k.replace('exon_', ''): v for k, v in attributes.items()}
             attributes = {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in attributes.items()}
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
-                exon = Exon(id=exon_id, chr=transcript.chr, start=start, end=end, strand=strand, transcript=transcript,
-                            genome=self._genome,
-                            **attributes)
-                transcript.add_exon(exon)
+                if exon_id in exons_map:
+                    exons_map[exon_id].add_to_transcript(transcript)
+                else:
+                    exon = Exon(id=exon_id, chr=transcript.chr, start=start, end=end, strand=strand, gene=transcript.get_gene(),
+                                genome=self._genome,
+                                **attributes)
+                    exon.add_to_transcript(transcript)
+                    exons_map[exon_id] = exon
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
 
