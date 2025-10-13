@@ -9,13 +9,13 @@ License: LGPL-3.0-or-later
 """
 
 
-from .genome.builder import GenomeBuilder
-from .genome.chromosome import Chromosome
-from .genome.exon import Exon
-from .genome.gene import Gene
-from .genome.genome import Genome
-from .genome.genome_element import GenomeElement
-from .genome.locus import Locus
-from .genome.transcript import Transcript
+from .genome import GenomeBuilder
+from .genome import Chromosome
+from .genome import Exon
+from .genome import Gene
+from .genome import Genome
+from .genome import GenomeElement
+from .genome import Locus
+from .genome import Transcript
 
 __all__ = ["Genome", "Gene", "Transcript", "Exon", "Chromosome", "Locus", "GenomeElement", "GenomeBuilder"]
