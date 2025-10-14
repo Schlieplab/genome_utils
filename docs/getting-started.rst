@@ -14,22 +14,16 @@ The package is published on PyPI. Install it with pip (Python 3.10+):
 
    pip install GenomeUtils
 
-To work from a local clone instead, install the project in editable mode:
-
-.. code-block:: bash
-
-   pip install -e .
-
 Core concepts
 -------------
 
 GenomeUtils models genomic information with a hierarchy of Python classes:
 
-- :class:`GenomeUtils.genome.Genome` contains chromosomes and maintains fast lookup indexes.
-- :class:`GenomeUtils.genome.Chromosome` stores sequence references and gene collections.
-- :class:`GenomeUtils.genome.Gene`, :class:`GenomeUtils.genome.Transcript`, and :class:`GenomeUtils.genome.Exon`
+- :class:`GenomeUtils.Genome.Genome` contains chromosomes and maintains fast lookup indexes.
+- :class:`GenomeUtils.Genome.Chromosome` stores sequence references and gene collections.
+- :class:`GenomeUtils.Genome.Gene`, :class:`GenomeUtils.Genome.Transcript`, and :class:`GenomeUtils.Genome.Exon`
     represent individual genomic features.
-- :class:`GenomeUtils.genome.GenomeBuilder` orchestrates parsing FASTA and GTF files to build genomes.
+- :class:`GenomeUtils.Genome.GenomeBuilder` orchestrates parsing FASTA and GTF files to build genomes.
 - :class:`GenomeUtils.Downloaders.EnsemblGenomeDownloader` fetches genome assets from Ensembl.
 
 Complete workflow example
@@ -41,7 +35,7 @@ The snippet below downloads Ensembl resources and builds an indexed genome.
 
     from pathlib import Path
     from GenomeUtils.Downloaders import EnsemblGenomeDownloader
-    from GenomeUtils.genome import GenomeBuilder
+    from GenomeUtils.Genome import GenomeBuilder
 
    downloader = EnsemblGenomeDownloader(
        assembly_id="GRCh38",
@@ -73,7 +67,7 @@ If you already have FASTA and GTF files on disk, pass them directly to the build
 .. code-block:: python
 
     from pathlib import Path
-    from GenomeUtils.genome import GenomeBuilder
+    from GenomeUtils.Genome import GenomeBuilder
 
    dna_fasta = Path("/path/to/genome.dna.fa.gz")
    cdna_fasta = Path("/path/to/genome.cdna.fa.gz")
@@ -110,11 +104,11 @@ For unit tests or demonstrations, you can construct entire genomes in memory.
 
     from Bio.Seq import Seq
     from Bio.SeqRecord import SeqRecord
-    from GenomeUtils.genome import Genome
-    from GenomeUtils.genome import Chromosome
-    from GenomeUtils.genome import Gene
-    from GenomeUtils.genome import Transcript
-    from GenomeUtils.genome import Exon
+    from GenomeUtils.Genome import Genome
+    from GenomeUtils.Genome import Chromosome
+    from GenomeUtils.Genome import Gene
+    from GenomeUtils.Genome import Transcript
+    from GenomeUtils.Genome import Exon
 
    genome = Genome(id="toy", species="Test species", name="Toy Genome")
    chr1_seq = SeqRecord(Seq("AGCATGATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC"), id="chr1")
