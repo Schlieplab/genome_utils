@@ -65,6 +65,10 @@ class Transcript(GenomeElement):
 
     def add_exon(self, exon: "Exon"):
         """Add an `Exon` to the transcript in a sorted manner."""
+        # Only add if not already present
+        if exon in self._children:
+            return
+            
         pos = 0
         # For '+' strand, sort ascending by start coordinate.
         # For '-' strand, sort descending by start coordinate (transcriptional order).
