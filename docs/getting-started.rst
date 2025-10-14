@@ -104,37 +104,37 @@ For unit tests or demonstrations, you can construct entire genomes in memory.
 
     from Bio.Seq import Seq
     from Bio.SeqRecord import SeqRecord
-    from GenomeUtils.Genome import Genome
-    from GenomeUtils.Genome import Chromosome
-    from GenomeUtils.Genome import Gene
-    from GenomeUtils.Genome import Transcript
-    from GenomeUtils.Genome import Exon
+    from GenomeUtils.Genome import Genome, Chromosome, Gene, Transcript, Exon
 
-   genome = Genome(id="toy", species="Test species", name="Toy Genome")
-   chr1_seq = SeqRecord(Seq("AGCATGATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC"), id="chr1")
-   chromosome = Chromosome("chr1", seq_index={"chr1": chr1_seq}, genome=genome, length=len(chr1_seq.seq))
-   genome.add_chromosome(chromosome)
+    # Create a tiny in-memory genome
+    genome = Genome(id="toy", species="Test species", name="Toy Genome")
+    chr1_seq = SeqRecord(Seq("AGCATGATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC"), id="chr1")
+    chromosome = Chromosome("chr1", seq_index={"chr1": chr1_seq}, genome=genome, length=len(chr1_seq.seq))
 
-   gene = Gene(id="GENE001", chr=chromosome, name="MYGENE", start=5, end=35, strand="+", genome=genome)
-   chromosome.add_gene(gene)
+    genome.add_chromosome(chromosome)
 
-   transcript = Transcript(
-       id="TRANSCRIPT001",
-       chr=chromosome,
-       start=5,
-       end=35,
-       strand="+",
-       sequence=Seq("CATGATGCATGCATGCATGCATGCATGC"),
-       gene=gene,
-       genome=genome,
-   )
+    gene = Gene(id="GENE001", chr=chromosome.id, name="MYGENE", start=5, end=35, strand='+', genome=genome, chromosome=chromosome)
+    chromosome.add_gene(gene)
 
-   gene.add_transcript(transcript)
-   transcript.add_exon(Exon(id="EXON001", chr=chromosome, start=5, end=15, strand="+", transcript=transcript, genome=genome))
-   transcript.add_exon(Exon(id="EXON002", chr=chromosome, start=25, end=35, strand="+", transcript=transcript, genome=genome))
+    transcript = Transcript(
+        id="TRANSCRIPT001",
+        chr=chromosome.id,
+        start=5,
+        end=35,
+        strand='+',
+        sequence=Seq("CATGATGCATGCATGCATGCATGCATGC"),
+        gene=gene,
+        genome=genome,
+    )
 
-   genome.index()
-   assert genome.gene_by_id("GENE001").name == "MYGENE"
+    gene.add_transcript(transcript)
+
+    Exon(id="EXON001", chr=chromosome.id, start=5, end=15, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
+    Exon(id="EXON002", chr=chromosome.id, start=25, end=35, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
+
+
+    genome.index()
+    print(genome.gene_by_id("GENE001").name)
 
 Next steps
 ----------
