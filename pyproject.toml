@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "GenomeUtils"
-version = "0.1.0"
+version = "0.1.1"
 description = "An object-oriented Python library for working with genomic data."
 authors = [
     {name="Seyedarash Ayatollahi", email="seyedarash.ayatollahi@b-tu.de"},

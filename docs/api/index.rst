@@ -9,4 +9,4 @@ The pages are generated automatically from the source code using ``autodoc`` and
    :caption: API Modules
 
    modules/GenomeUtils.Downloaders
-   modules/GenomeUtils.genome
+   modules/GenomeUtils.Genome

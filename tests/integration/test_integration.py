@@ -3,7 +3,7 @@
 Filename: tests/integration/test_integration.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.0
+Version: 0.1.1
 Description: Integration tests for the genome_utils package.
 License: LGPL-3.0-or-later
 """
@@ -80,7 +80,7 @@ class TestIntegration:
         
         # Test transcript -> exon relationship
         assert exon1 in transcript1.exons
-        assert exon1.get_transcript() == transcript1
+        assert transcript1 in exon1.get_transcripts()
 
     @pytest.mark.integration
     def test_sequence_retrieval(self, complex_genome_structure):

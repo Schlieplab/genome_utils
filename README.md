@@ -115,12 +115,12 @@ chromosome = Chromosome("chr1", seq_index={"chr1": chr1_seq}, genome=genome, len
 
 genome.add_chromosome(chromosome)
 
-gene = Gene(id="GENE001", chr=chromosome, name="MYGENE", start=5, end=35, strand='+', genome=genome)
+gene = Gene(id="GENE001", chr=chromosome.id, name="MYGENE", start=5, end=35, strand='+', genome=genome, chromosome=chromosome)
 chromosome.add_gene(gene)
 
 transcript = Transcript(
     id="TRANSCRIPT001",
-    chr=chromosome,
+    chr=chromosome.id,
     start=5,
     end=35,
     strand='+',
@@ -131,8 +131,9 @@ transcript = Transcript(
 
 gene.add_transcript(transcript)
 
-transcript.add_exon(Exon(id="EXON001", chr=chromosome, start=5, end=15, strand='+', transcript=transcript, genome=genome))
-transcript.add_exon(Exon(id="EXON002", chr=chromosome, start=25, end=35, strand='+', transcript=transcript, genome=genome))
+Exon(id="EXON001", chr=chromosome.id, start=5, end=15, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
+Exon(id="EXON002", chr=chromosome.id, start=25, end=35, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
+
 
 genome.index()
 print(genome.gene_by_id("GENE001").name)

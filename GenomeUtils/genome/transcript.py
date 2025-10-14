@@ -3,7 +3,7 @@
 Filename: GenomeUtils/genome/transcript.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.0
+Version: 0.1.1
 Description: This file defines the Transcript class, representing a biological transcript.
 License: LGPL-3.0-or-later
 """
@@ -65,6 +65,10 @@ class Transcript(GenomeElement):
 
     def add_exon(self, exon: "Exon"):
         """Add an `Exon` to the transcript in a sorted manner."""
+        # Only add if not already present
+        if exon in self._children:
+            return
+            
         pos = 0
         # For '+' strand, sort ascending by start coordinate.
         # For '-' strand, sort descending by start coordinate (transcriptional order).

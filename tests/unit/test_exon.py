@@ -3,7 +3,7 @@
 Filename: tests/unit/test_exon.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.0
+Version: 0.1.1
 Description: Unit tests for the Exon class.
 License: LGPL-3.0-or-later
 """
@@ -40,7 +40,7 @@ class TestExon:
             start=1100,
             end=1200,
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -49,7 +49,7 @@ class TestExon:
         assert exon.end == 1200
         assert exon.strand == "+"
         assert exon.chr == "chr1"
-        assert exon._parent == transcript
+        assert exon._transcripts == [transcript]
         assert exon._genome == genome_mock
         assert len(exon) == 101  # 1-based inclusive
 
@@ -64,7 +64,7 @@ class TestExon:
             start=3000,
             end=3100,
             strand="-",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock,
             exon_number=1,
             phase=0
@@ -85,7 +85,7 @@ class TestExon:
             start=2000,
             end=2500,
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -93,7 +93,7 @@ class TestExon:
         assert exon.locus == expected_locus
 
     def test_exon_get_transcript(self):
-        """Test get_transcript method."""
+        """Test get_transcripts method."""
         transcript = self.create_mock_transcript()
         genome_mock = Mock()
         
@@ -103,12 +103,12 @@ class TestExon:
             start=1100,
             end=1200,
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
-        assert exon.get_transcript() == transcript
-        assert exon.get_transcript() is exon._parent
+        assert exon.get_transcripts() == [transcript]
+        assert exon.get_transcripts()[0] is transcript
 
     def test_exon_sequence_property(self):
         """Test exon sequence property."""
@@ -122,7 +122,7 @@ class TestExon:
             start=1100,
             end=1109,  # 10 bp
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -132,7 +132,7 @@ class TestExon:
             start=1200,
             end=1219,  # 20 bp
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -160,16 +160,16 @@ class TestExon:
             start=1100,
             end=1200,
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
         # Mock transcript with empty exons list
         transcript.exons = []
         
-        # Should return empty string when exon not found
-        sequence = exon.sequence
-        assert str(sequence) == ""
+        # Should raise ValueError when exon not found in transcript's exons
+        with pytest.raises(ValueError):
+            _ = exon.sequence
 
     def test_exon_sequence_property_complex_scenario(self):
         """Test exon sequence with multiple exons in realistic scenario."""
@@ -186,7 +186,7 @@ class TestExon:
             start=1100,
             end=1119,  # 20 bp
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -196,7 +196,7 @@ class TestExon:
             start=1200,
             end=1214,  # 15 bp
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -206,7 +206,7 @@ class TestExon:
             start=1300,
             end=1320,  # 21 bp
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -229,7 +229,7 @@ class TestExon:
             start=12000,
             end=12100,
             strand="-",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -257,7 +257,7 @@ class TestExon:
             start=1100,
             end=1200,
             strand="+",
-            transcript=transcript1,
+            transcripts=[transcript1],
             genome=genome_mock
         )
         
@@ -267,7 +267,7 @@ class TestExon:
             start=1100,      # Same coordinates
             end=1200,
             strand="+",      # Same strand
-            transcript=transcript1,  # Same transcript (same chr)
+            transcripts=[transcript1],  # Same transcript (same chr)
             genome=genome_mock
         )
         
@@ -277,7 +277,7 @@ class TestExon:
             start=2000,      # Different coordinates
             end=2100,
             strand="-",      # Different strand
-            transcript=transcript2,  # Different transcript (different chr)
+            transcripts=[transcript2],  # Different transcript (different chr)
             genome=genome_mock
         )
         
@@ -287,7 +287,7 @@ class TestExon:
             start=1100,
             end=1200,
             strand="+",
-            transcript=transcript1,
+            transcripts=[transcript1],
             genome=genome_mock
         )
         
@@ -307,7 +307,7 @@ class TestExon:
             start=2000,
             end=2100,
             strand="+",
-            transcript=transcript_pos,
+            transcripts=[transcript_pos],
             genome=genome_mock
         )
         
@@ -317,7 +317,7 @@ class TestExon:
             start=2000,
             end=2100,
             strand="-",
-            transcript=transcript_neg,
+            transcripts=[transcript_neg],
             genome=genome_mock
         )
         
@@ -337,7 +337,7 @@ class TestExon:
             start=15000,
             end=15100,
             strand="+",
-            transcript=transcript,
+            transcripts=[transcript],
             genome=genome_mock
         )
         
@@ -359,7 +359,7 @@ class TestExon:
                 start=1500 + i * 500,
                 end=1600 + i * 500,
                 strand="+",
-                transcript=transcript,
+                transcripts=[transcript],
                 genome=genome_mock,
                 exon_number=i+1
             )
@@ -367,7 +367,7 @@ class TestExon:
         
         # All exons should belong to the same transcript
         for exon in exons:
-            assert exon.get_transcript() == transcript
+            assert exon.get_transcripts() == [transcript]
             assert exon.chr == "chr1"
             assert exon.strand == "+"
         
@@ -417,7 +417,7 @@ class TestExon:
         assert exon._genome is None
 
     def test_exon_standalone_get_transcript_returns_none(self):
-        """Test that get_transcript returns None for standalone exon."""
+        """Test that get_transcripts raises error for standalone exon."""
         exon = Exon(
             id="ENSE00000003",
             chr="chr1",
@@ -426,8 +426,9 @@ class TestExon:
             strand="+"
         )
         
-        # Should return None since no parent is set
-        assert exon._parent is None
+        # Should raise AttributeError since no transcripts are set
+        with pytest.raises(AttributeError):
+            exon.get_transcripts()
 
     def test_exon_standalone_sequence_property_fails(self):
         """Test that sequence property fails gracefully for standalone exon."""
@@ -496,6 +497,136 @@ class TestExon:
         expected_repr = "Exon(id='ENSE00000005', locus=Locus(chr5:12000-12100, strand=-))"
         assert repr(exon) == expected_repr
 
+    def test_exon_get_gene_via_parent(self):
+        """Test get_gene method when gene is set as parent."""
+        gene = Mock()
+        gene.id = "ENSG00000001"
+        transcript = self.create_mock_transcript()
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            gene=gene,
+            transcripts=[transcript],
+            genome=genome_mock
+        )
+        
+        assert exon.get_gene() == gene
+        assert exon.get_gene() is exon.parent
+        assert exon.parent.id == "ENSG00000001"
+
+    def test_exon_get_gene_via_transcript(self):
+        """Test that exon can get gene through its transcript."""
+        gene = Mock()
+        gene.id = "ENSG00000001"
+        transcript = self.create_mock_transcript()
+        transcript.get_gene = Mock(return_value=gene)
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            transcripts=[transcript],
+            genome=genome_mock
+        )
+        
+        # Exon can get gene through transcript
+        gene_via_transcript = exon.get_transcripts()[0].get_gene()
+        assert gene_via_transcript == gene
+        assert gene_via_transcript.id == "ENSG00000001"
+
+    def test_exon_with_gene_parent_no_transcript(self):
+        """Test exon with gene as parent but no transcripts."""
+        gene = Mock()
+        gene.id = "ENSG00000001"
+        gene.name = "TEST_GENE"
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            gene=gene,
+            genome=genome_mock
+        )
+        
+        assert exon.get_gene() == gene
+        assert exon.parent == gene
+        # Should raise AttributeError when trying to get transcripts
+        with pytest.raises(AttributeError):
+            exon.get_transcripts()
+
+    def test_exon_gene_relationship_consistency(self):
+        """Test that gene relationship is consistent when set via both gene and transcript."""
+        gene = Mock()
+        gene.id = "ENSG00000001"
+        transcript = self.create_mock_transcript()
+        transcript.get_gene = Mock(return_value=gene)
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            gene=gene,
+            transcripts=[transcript],
+            genome=genome_mock
+        )
+        
+        # Gene via parent should be the same as gene via transcript
+        gene_via_parent = exon.get_gene()
+        gene_via_transcript = exon.get_transcripts()[0].get_gene()
+        assert gene_via_parent == gene_via_transcript
+        assert gene_via_parent.id == gene_via_transcript.id
+
+    def test_exon_multiple_transcripts_same_gene(self):
+        """Test exon belonging to multiple transcripts of the same gene."""
+        gene = Mock()
+        gene.id = "ENSG00000001"
+        
+        transcript1 = self.create_mock_transcript()
+        transcript1.id = "TRANS001"
+        transcript1.get_gene = Mock(return_value=gene)
+        
+        transcript2 = self.create_mock_transcript()
+        transcript2.id = "TRANS002"
+        transcript2.get_gene = Mock(return_value=gene)
+        
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            gene=gene,
+            transcripts=[transcript1, transcript2],
+            genome=genome_mock
+        )
+        
+        # Should have two transcripts
+        assert len(exon.get_transcripts()) == 2
+        assert transcript1 in exon.get_transcripts()
+        assert transcript2 in exon.get_transcripts()
+        
+        # Both transcripts should return the same gene
+        for transcript in exon.get_transcripts():
+            assert transcript.get_gene() == gene
+        
+        # Direct gene access should match
+        assert exon.get_gene() == gene
 
 
 
