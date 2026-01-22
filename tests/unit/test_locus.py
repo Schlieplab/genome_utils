@@ -185,4 +185,138 @@ class TestLocus:
         locus_dict = {locus1: "value1", locus3: "value2"}
         assert len(locus_dict) == 2
 
+    def test_locus_from_string_valid(self):
+        """Test from_string method with a valid locus string."""
+        locus_str = "12:25205246-25250936,-"
+        locus = Locus.from_string(locus_str)
+
+        assert locus.chr == "12"
+        assert locus.start == 25205246
+        assert locus.end == 25250936
+        assert locus.strand == "-"
+
+    def test_locus_from_string_invalid_format(self):
+        """Test from_string method with invalid string formats."""
+        invalid_strings = [
+            "12:25205246",  # Missing end and strand
+            "12:25205246-", # Missing end and strand
+            "12:25205246-25250936", # Missing strand
+            "12-25205246-25250936,-", # Missing colon
+            "invalid_string",
+            "12::,-",
+            "12:25-,"
+        ]
+
+        for s in invalid_strings:
+            with pytest.raises(ValueError, match="Invalid locus string"):
+                Locus.from_string(s)
+
+    def test_locus_from_string_positive_strand(self):
+        """Test from_string method with positive strand."""
+        locus_str = "chr1:1000-2000,+"
+        locus = Locus.from_string(locus_str)
+
+        assert locus.chr == "chr1"
+        assert locus.start == 1000
+        assert locus.end == 2000
+        assert locus.strand == "+"
+
+    def test_locus_from_string_various_chromosomes(self):
+        """Test from_string method with various chromosome formats."""
+        test_cases = [
+            ("chr1:100-200,+", "chr1", 100, 200, "+"),
+            ("1:100-200,+", "1", 100, 200, "+"),
+            ("X:500-600,-", "X", 500, 600, "-"),
+            ("chrX:500-600,-", "chrX", 500, 600, "-"),
+            ("MT:1-100,+", "MT", 1, 100, "+"),
+            ("chrM:1-100,-", "chrM", 1, 100, "-"),
+        ]
+
+        for locus_str, expected_chr, expected_start, expected_end, expected_strand in test_cases:
+            locus = Locus.from_string(locus_str)
+            assert locus.chr == expected_chr
+            assert locus.start == expected_start
+            assert locus.end == expected_end
+            assert locus.strand == expected_strand
+
+    def test_locus_from_string_single_base(self):
+        """Test from_string method with single base locus."""
+        locus_str = "chr1:1000-1000,+"
+        locus = Locus.from_string(locus_str)
+
+        assert locus.chr == "chr1"
+        assert locus.start == 1000
+        assert locus.end == 1000
+        assert len(locus) == 1
+
+    def test_locus_from_string_large_coordinates(self):
+        """Test from_string method with large coordinates."""
+        locus_str = "chr1:123456789-987654321,+"
+        locus = Locus.from_string(locus_str)
+
+        assert locus.chr == "chr1"
+        assert locus.start == 123456789
+        assert locus.end == 987654321
+
+    def test_locus_from_string_roundtrip(self):
+        """Test that from_string and __str__ are inverse operations."""
+        test_loci = [
+            Locus("chr1", 100, 200, "+"),
+            Locus("12", 25205246, 25250936, "-"),
+            Locus("X", 1000, 2000, "+"),
+            Locus("MT", 1, 100, "-"),
+        ]
+
+        for original_locus in test_loci:
+            locus_str = str(original_locus)
+            reconstructed_locus = Locus.from_string(locus_str)
+            assert reconstructed_locus == original_locus
+            assert reconstructed_locus.chr == original_locus.chr
+            assert reconstructed_locus.start == original_locus.start
+            assert reconstructed_locus.end == original_locus.end
+            assert reconstructed_locus.strand == original_locus.strand
+
+    def test_locus_from_string_non_numeric_coordinates(self):
+        """Test from_string method with non-numeric coordinates."""
+        invalid_strings = [
+            "chr1:abc-200,+",
+            "chr1:100-xyz,+",
+            "chr1:10.5-200,+",  # Float instead of int
+            "chr1:100-200.5,+",
+        ]
+
+        for s in invalid_strings:
+            with pytest.raises(ValueError, match="Invalid locus string"):
+                Locus.from_string(s)
+
+    def test_locus_from_string_invalid_start_end_order(self):
+        """Test from_string method when start > end (should fail during Locus creation)."""
+        locus_str = "chr1:200-100,+"
+        
+        # from_string will parse successfully, but Locus validation should catch it
+        with pytest.raises(ValueError, match="Start coordinate cannot be greater than end coordinate"):
+            Locus.from_string(locus_str)
+
+    def test_locus_from_string_zero_start(self):
+        """Test from_string method with zero start coordinate (should fail)."""
+        locus_str = "chr1:0-100,+"
+        
+        # from_string will parse successfully, but Locus validation should catch it
+        with pytest.raises(ValueError, match="Start coordinate cannot be less than 1"):
+            Locus.from_string(locus_str)
+
+    def test_locus_from_string_whitespace_in_coordinates(self):
+        """Test from_string method with strings containing whitespace in coordinates."""
+        # Only strings with whitespace in numeric coordinates will fail isdigit() check
+        invalid_strings = [
+            "chr1: 100-200,+",      # Space after colon, before start
+            "chr1:100 -200,+",      # Space after start
+            "chr1:100- 200,+",      # Space after dash
+            "chr1:100-200 ,+",      # Space after end, before comma
+        ]
+
+        for s in invalid_strings:
+            with pytest.raises(ValueError, match="Invalid locus string"):
+                Locus.from_string(s)
+
 
