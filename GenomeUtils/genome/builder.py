@@ -49,7 +49,6 @@ def _get_default_chromosomes_for_species(species: str) -> set[str]:
         # Mouse: 1-19, X, Y, M, MT
         standard_set = {str(i) for i in range(1, 20)} | {'X', 'Y', 'M', 'MT'}
     else:
-        # Default to human if species not recognized
         raise ValueError(f"Species '{species}' not recognized. Please use a supported species.")
     
     # Return both with and without 'chr' prefix
@@ -84,7 +83,7 @@ class GenomeBuilder:
     Example::
 
         builder = GenomeBuilder(id="hg38", species="homo_sapiens", name="Human Reference Genome")
-        genome = (
+        genome, scaffold_genome = (
             builder.with_dna_fasta(Path("path/to/dna.fa"))
             .with_cdna_fasta(Path("path/to/cdna.fa"))
             .with_gtf_file(Path("path/to/annotations.gtf"))
@@ -388,9 +387,13 @@ class GenomeBuilder:
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
 
-    def build(self) -> Genome | tuple[Genome, Genome]:
+    def build(self) -> tuple[Genome, Genome | None]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
+        
+        Returns:
+            A tuple of (genome, scaffold_genome). If scaffold separation was disabled,
+            scaffold_genome will be None.
         """
         if not self._genes_map:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
@@ -405,11 +408,7 @@ class GenomeBuilder:
         
         self._offload_memory()
         
-
-        if self._scaffold_genome:
-            return self._genome, self._scaffold_genome
-        
-        return self._genome
+        return self._genome, self._scaffold_genome
 
     def _offload_memory(self):
         """Clears large data structures from memory after the build is complete."""

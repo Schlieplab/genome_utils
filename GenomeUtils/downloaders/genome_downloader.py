@@ -21,8 +21,8 @@ class EnsemblGenomeDownloader(Downloader):
     """
     Downloads genome data from Ensembl.
 
-    This downloader fetches the download URLs
-    for genomic data using `gget`, downloads the files, and stores them in `genomes_root_dir/ensembl/{assembly_id}/{ensembl_release}`.
+    This downloader fetches the download URLs for genomic data using `gget`, 
+    downloads the files, and stores them in `genomes_root_dir/ensembl/{assembly_id}/{ensembl_release}`.
     """
 
     def __init__(self, 
@@ -78,4 +78,4 @@ class EnsemblGenomeDownloader(Downloader):
             'dna': dna_path,
             'cdna': cdna_path,
             'annotation': annotation_path,
-        } 
+        }
