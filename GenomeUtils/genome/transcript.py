@@ -51,6 +51,7 @@ class Transcript(GenomeElement):
             kwargs: Additional keyword arguments.
         """
         self._sequence = sequence
+        self._exons: List["Exon"] = []
         locus = Locus(chr, start, end, strand)
         super().__init__(id, locus, gene, genome, **kwargs)
         
@@ -61,24 +62,25 @@ class Transcript(GenomeElement):
     
     @property
     def exons(self) -> List["Exon"]:
-        return self._children
+        """Returns the list of exons associated with this transcript."""
+        return self._exons
 
     def add_exon(self, exon: "Exon"):
         """Add an `Exon` to the transcript in a sorted manner."""
         # Only add if not already present
-        if exon in self._children:
+        if exon in self._exons:
             return
             
         pos = 0
         # For '+' strand, sort ascending by start coordinate.
         # For '-' strand, sort descending by start coordinate (transcriptional order).
         if self.strand == "+":
-            while pos < len(self._children) and self._children[pos].start < exon.start:
+            while pos < len(self._exons) and self._exons[pos].start < exon.start:
                 pos += 1
         else:  # self.strand == "-"
-            while pos < len(self._children) and self._children[pos].start > exon.start:
+            while pos < len(self._exons) and self._exons[pos].start > exon.start:
                 pos += 1
-        self._children.insert(pos, exon)
+        self._exons.insert(pos, exon)
         
         self._genome.is_indexed = False
 

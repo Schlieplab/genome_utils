@@ -377,12 +377,15 @@ class GenomeBuilder:
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
                 if exon_id in exons_map:
-                    exons_map[exon_id].add_to_transcript(transcript)
+                    exon = exons_map[exon_id]
+                    exon.add_transcript(transcript)
+                    transcript.add_exon(exon)
                 else:
                     exon = Exon(id=exon_id, chr=transcript.chr, start=start, end=end, strand=strand, gene=transcript.get_gene(),
                                 genome=self._genome,
                                 **attributes)
-                    exon.add_to_transcript(transcript)
+                    exon.add_transcript(transcript)
+                    transcript.add_exon(exon)
                     exons_map[exon_id] = exon
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")

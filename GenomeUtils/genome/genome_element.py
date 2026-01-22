@@ -79,9 +79,9 @@ class GenomeElement(ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(id='{self.id}', locus={self.locus!r})"
     
-    def __eq__(self, other: GenomeElement) -> bool:
-        if not isinstance(other, GenomeElement):
-            return False
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return NotImplemented
         return self.id == other.id and self.locus == other.locus
     
     def __hash__(self) -> int:

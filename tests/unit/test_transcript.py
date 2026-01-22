@@ -124,7 +124,7 @@ class TestTranscript:
         
         # Initially empty
         assert transcript.exons == []
-        assert transcript.exons is transcript._children
+        assert transcript.exons is transcript._exons
 
     def test_transcript_add_exon_positive_strand(self):
         """Test adding exons to transcript on positive strand (sorted ascending)."""
@@ -594,8 +594,8 @@ class TestTranscript:
         exon2.end = 1349
         exon2.__len__ = Mock(return_value=50)
         
-        # Manually add to children (bypassing add_exon to avoid genome dependency)
-        transcript._children = [exon1, exon2]
+        # Manually add to exons (bypassing add_exon to avoid genome dependency)
+        transcript._exons = [exon1, exon2]
         
         # Test coordinate conversion
         locus = transcript.transcript_to_genomic_pos(50)

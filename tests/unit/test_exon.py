@@ -628,5 +628,112 @@ class TestExon:
         # Direct gene access should match
         assert exon.get_gene() == gene
 
+    def test_exon_add_transcript(self):
+        """Test adding a transcript to an exon."""
+        transcript = self.create_mock_transcript()
+        transcript.id = "TRANS001"
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            genome=genome_mock
+        )
+        
+        # Initially no transcripts
+        with pytest.raises(AttributeError):
+            exon.get_transcripts()
+        
+        # Add transcript
+        exon.add_transcript(transcript)
+        
+        # Should now have one transcript
+        assert len(exon.get_transcripts()) == 1
+        assert transcript in exon.get_transcripts()
+
+    def test_exon_add_multiple_transcripts(self):
+        """Test adding multiple transcripts to an exon."""
+        transcript1 = self.create_mock_transcript()
+        transcript1.id = "TRANS001"
+        
+        transcript2 = self.create_mock_transcript()
+        transcript2.id = "TRANS002"
+        
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            genome=genome_mock
+        )
+        
+        # Add both transcripts
+        exon.add_transcript(transcript1)
+        exon.add_transcript(transcript2)
+        
+        # Should have both transcripts
+        assert len(exon.get_transcripts()) == 2
+        assert transcript1 in exon.get_transcripts()
+        assert transcript2 in exon.get_transcripts()
+
+    def test_exon_add_transcript_no_duplicates(self):
+        """Test that add_transcript doesn't add duplicates."""
+        transcript = self.create_mock_transcript()
+        transcript.id = "TRANS001"
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            genome=genome_mock
+        )
+        
+        # Add same transcript multiple times
+        exon.add_transcript(transcript)
+        exon.add_transcript(transcript)
+        exon.add_transcript(transcript)
+        
+        # Should only have one instance
+        assert len(exon.get_transcripts()) == 1
+        assert exon.get_transcripts()[0] is transcript
+
+    def test_exon_add_transcript_maintains_order(self):
+        """Test that add_transcript maintains the order of addition."""
+        transcripts = []
+        for i in range(5):
+            t = self.create_mock_transcript()
+            t.id = f"TRANS{i:03d}"
+            transcripts.append(t)
+        
+        genome_mock = Mock()
+        
+        exon = Exon(
+            id="ENSE00000001",
+            chr="chr1",
+            start=1100,
+            end=1200,
+            strand="+",
+            genome=genome_mock
+        )
+        
+        # Add transcripts in order
+        for t in transcripts:
+            exon.add_transcript(t)
+        
+        # Should maintain order
+        exon_transcripts = exon.get_transcripts()
+        assert len(exon_transcripts) == 5
+        for i, t in enumerate(transcripts):
+            assert exon_transcripts[i] is t
+
 
 
