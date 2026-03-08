@@ -20,6 +20,8 @@ from .gene import Gene
 from .locus import Locus
 from .transcript import Transcript
 
+import logging
+
 
 class Genome:
     """Represents a Genome object, includes a collection of chromosomes, genes, transcripts, and exons."""
@@ -43,6 +45,7 @@ class Genome:
         
         self._chromosomes: Dict[str, Chromosome] = {}
         self._genes: Dict[str, Gene] = {}
+        self._genes_by_name: Dict[str, Gene] = {}
         self._transcripts: Dict[str, Transcript] = {}
         self._exons: Dict[str, Exon] = {}
         self.is_indexed: bool = False
@@ -69,6 +72,10 @@ class Genome:
         for chrom in self._chromosomes.values():
             for gene in chrom.genes:
                 self._genes[gene.id] = gene
+                if gene.name not in self._genes_by_name:
+                    self._genes_by_name[gene.name] = gene
+                else:
+                    logging.warning(f"Duplicate gene name: {gene.name}. Skipping.")
                 for transcript in gene.transcripts:
                     self._transcripts[transcript.id] = transcript
                     for exon in transcript.exons:
@@ -122,6 +129,15 @@ class Genome:
             return self._genes[gene_id]
         except KeyError:
             raise ValueError(f"Gene with ID '{gene_id}' not found.")
+
+    def gene_by_name(self, gene_name: str) -> Gene:
+        """Get a gene by its name using the index. Raises ValueError if not found."""
+        if not self.is_indexed:
+            raise RuntimeError("The genome is not indexed. Call .index() after adding features.")
+        try:
+            return self._genes_by_name[gene_name]
+        except KeyError:
+            raise ValueError(f"Gene with name '{gene_name}' not found.")
 
     def transcript_by_id(self, transcript_id: str) -> Transcript:
         """Get a transcript by its ID using the index. Raises ValueError if not found."""

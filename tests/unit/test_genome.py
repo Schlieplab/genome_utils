@@ -258,6 +258,39 @@ class TestGenome:
         with pytest.raises(ValueError, match="Gene with ID 'GENE_NONEXISTENT' not found"):
             genome.gene_by_id("GENE_NONEXISTENT")
 
+    def test_genome_gene_by_name_before_indexing(self):
+        """Test error when getting gene by name before indexing."""
+        genome = Genome("test", "Homo sapiens", "name")
+        
+        with pytest.raises(RuntimeError, match="The genome is not indexed"):
+            genome.gene_by_name("GENE_1")
+
+    def test_genome_gene_by_name_after_indexing(self):
+        """Test getting gene by name after indexing."""
+        genome = Genome("test", "Homo sapiens", "name")
+        
+        # Set up genome structure
+        chromosome = Mock(spec=Chromosome)
+        chromosome.id = "chr1"
+        
+        gene = Mock(spec=Gene)
+        gene.id = "GENE001"
+        gene.name = "GENE_1"
+        
+        chromosome.genes = [gene]
+        gene.transcripts = []
+        
+        genome.add_chromosome(chromosome)
+        genome.index()
+        
+        # Should work after indexing
+        result = genome.gene_by_name("GENE_1")
+        assert result == gene
+        
+        # Should raise error for non-existent gene name
+        with pytest.raises(ValueError, match="Gene with name 'NONEXISTENT' not found"):
+            genome.gene_by_name("NONEXISTENT")
+
     def test_genome_transcript_by_id(self):
         """Test getting transcript by ID."""
         genome = Genome("test", "Homo sapiens", "name")
