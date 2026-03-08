@@ -130,7 +130,7 @@ class GenomeBuilder:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         if self._separate_scaffolds:
-            self.logger.info("Scaffold separation enabled. `build()` will return (main_genome, scaffold_genome).")
+            self.logger.info("Scaffold separation enabled.")
             self._scaffold_genome = Genome(
                 id=f"{id}_scaffolds",
                 species=species,
@@ -170,7 +170,7 @@ class GenomeBuilder:
                         shutil.copyfileobj(gz_in, f_out)
                 dna_file_to_use = extracted_path
 
-        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}...")
+        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}")
 
         dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
         
@@ -198,7 +198,7 @@ class GenomeBuilder:
         if self._cdna_records:
             raise BuilderStateError("with_cdna_fasta() has already been called.")
         
-        self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}...")
+        self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}")
         
         open_func = gzip.open if str(cdna_fasta_path).endswith('.gz') else open
         with open_func(cdna_fasta_path, "rt") as handle:
@@ -220,16 +220,30 @@ class GenomeBuilder:
         if self._genes_map:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
-        self.logger.info(f"Processing annotations from {gtf_path}...")
+        self.logger.info(f"Processing annotations from {gtf_path}")
+        gtf_file_to_use = gtf_path
+        
+        if str(gtf_path).endswith('.gz'):
+            extracted_path = gtf_path.with_suffix('')
+            
+            if extracted_path.exists():
+                self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
+                gtf_file_to_use = extracted_path
+            else:
+                self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
+                with gzip.open(gtf_path, 'rt') as gz_file:
+                    with open(extracted_path, 'w') as out_file:
+                        out_file.write(gz_file.read())
+                gtf_file_to_use = extracted_path
 
-        gtf_db_path = gtf_path.with_suffix('.db')
+        gtf_db_path = gtf_file_to_use.with_suffix(gtf_file_to_use.suffix + ".db")
 
         if gtf_db_path.exists():
             self.logger.info(f"Loading existing gffutils database: {gtf_db_path}")
             try:
                 db = gffutils.FeatureDB(str(gtf_db_path))
             except Exception as e:
-                self.logger.warning(f"Error loading existing gffutils database: {e}. Creating new database.")
+                self.logger.warning(f"Error loading existing gffutils database: {e}. Recreating it.")
                 gtf_db_path.unlink()
                 db = gffutils.create_db(str(gtf_path), 
                                         dbfn=str(gtf_db_path), 
@@ -239,21 +253,7 @@ class GenomeBuilder:
                                         disable_infer_genes=True, 
                                         disable_infer_transcripts=True)
         else:
-            self.logger.info(f"Database not found. Creating new database at: {gtf_db_path}")
-            gtf_file_to_use = gtf_path
-            
-            if str(gtf_path).endswith('.gz'):
-                extracted_path = gtf_path.with_suffix('')
-                
-                if extracted_path.exists():
-                    self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
-                    gtf_file_to_use = extracted_path
-                else:
-                    self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
-                    with gzip.open(gtf_path, 'rt') as gz_file:
-                        with open(extracted_path, 'w') as out_file:
-                            out_file.write(gz_file.read())
-                    gtf_file_to_use = extracted_path
+            self.logger.info(f"Database not found. Creating new database.")
             
             db = gffutils.create_db(
                     str(gtf_file_to_use),
@@ -264,8 +264,8 @@ class GenomeBuilder:
                     disable_infer_genes=True,
                     disable_infer_transcripts=True
             )
+            self.logger.info(f"GTF database created at: {gtf_db_path}")
 
-        logging.info(f"GTF database created at: {gtf_db_path}")
         
         self._create_genes(db)
 

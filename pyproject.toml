@@ -25,7 +25,7 @@ dependencies = [
     "gffutils>=0.13,<0.14",
     "requests>=2.32,<3",
     "biopython>=1.83,<2",
-    "gget>=0.29,<0.30",
+    "gget>=0.29,<0.31",
     "tqdm>=4.67,<5",
 ]
 

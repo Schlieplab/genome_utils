@@ -66,7 +66,7 @@ class Downloader(ABC):
                 shutil.copyfileobj(r.raw, f)
         self._created_files.add(destination_path)
         return destination_path
-    
+
     def cleanup(self):
         """
         Clean up created files.
@@ -77,4 +77,15 @@ class Downloader(ABC):
         else:
             for path in self._created_files:
                 if path.exists():
-                    path.unlink() 
+                    path.unlink()
+
+    def __del__(self):
+        """
+        Clean up temporary directory when the instance is garbage collected.
+        Only removes the download directory if it was created as a temp dir.
+        """
+        if self._is_temp_cache and self.download_dir.exists():
+            try:
+                shutil.rmtree(self.download_dir)
+            except OSError:
+                pass  # Ignore errors during cleanup (e.g. dir already removed)
