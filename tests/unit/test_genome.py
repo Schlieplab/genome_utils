@@ -126,6 +126,7 @@ class TestGenome:
         # Create gene
         gene = Mock(spec=Gene)
         gene.id = "GENE001"
+        gene.name = "GENE_1"
         
         # Create transcript
         transcript = Mock(spec=Transcript)
@@ -161,10 +162,13 @@ class TestGenome:
         # Create genes
         gene1 = Mock(spec=Gene)
         gene1.id = "GENE001"
+        gene1.name = "GENE_1"
         gene2 = Mock(spec=Gene)
         gene2.id = "GENE002"
+        gene2.name = "GENE_2"
         gene3 = Mock(spec=Gene)
         gene3.id = "GENE003"
+        gene3.name = "GENE_3"
         
         # Create transcripts
         transcript1 = Mock(spec=Transcript)
@@ -243,6 +247,7 @@ class TestGenome:
         
         gene = Mock(spec=Gene)
         gene.id = "GENE001"
+        gene.name = "GENE_1"
         
         chromosome.genes = [gene]
         gene.transcripts = []
@@ -258,6 +263,39 @@ class TestGenome:
         with pytest.raises(ValueError, match="Gene with ID 'GENE_NONEXISTENT' not found"):
             genome.gene_by_id("GENE_NONEXISTENT")
 
+    def test_genome_gene_by_name_before_indexing(self):
+        """Test error when getting gene by name before indexing."""
+        genome = Genome("test", "Homo sapiens", "name")
+        
+        with pytest.raises(RuntimeError, match="The genome is not indexed"):
+            genome.gene_by_name("GENE_1")
+
+    def test_genome_gene_by_name_after_indexing(self):
+        """Test getting gene by name after indexing."""
+        genome = Genome("test", "Homo sapiens", "name")
+        
+        # Set up genome structure
+        chromosome = Mock(spec=Chromosome)
+        chromosome.id = "chr1"
+        
+        gene = Mock(spec=Gene)
+        gene.id = "GENE001"
+        gene.name = "GENE_1"
+        
+        chromosome.genes = [gene]
+        gene.transcripts = []
+        
+        genome.add_chromosome(chromosome)
+        genome.index()
+        
+        # Should work after indexing
+        result = genome.gene_by_name("GENE_1")
+        assert result == gene
+        
+        # Should raise error for non-existent gene name
+        with pytest.raises(ValueError, match="Gene with name 'NONEXISTENT' not found"):
+            genome.gene_by_name("NONEXISTENT")
+
     def test_genome_transcript_by_id(self):
         """Test getting transcript by ID."""
         genome = Genome("test", "Homo sapiens", "name")
@@ -268,6 +306,7 @@ class TestGenome:
         
         gene = Mock(spec=Gene)
         gene.id = "GENE001"
+        gene.name = "GENE_1"
         
         transcript = Mock(spec=Transcript)
         transcript.id = "TRANS001"
@@ -302,6 +341,7 @@ class TestGenome:
         
         gene = Mock(spec=Gene)
         gene.id = "GENE001"
+        gene.name = "GENE_1"
         
         transcript = Mock(spec=Transcript)
         transcript.id = "TRANS001"
@@ -347,8 +387,10 @@ class TestGenome:
         
         gene1 = Mock(spec=Gene)
         gene1.id = "GENE001"
+        gene1.name = "GENE_1"
         gene2 = Mock(spec=Gene)
         gene2.id = "GENE002"
+        gene2.name = "GENE_2"
         
         transcript1 = Mock(spec=Transcript)
         transcript1.id = "TRANS001"
@@ -436,12 +478,13 @@ class TestGenome:
         
         gene = Mock(spec=Gene)
         gene.id = "GENE001"
+        gene.name = "GENE_1"
         
         chromosome.genes = [gene]
         gene.transcripts = []
         
         genome.add_chromosome(chromosome)
-        
+    
         # Index first time
         genome.index()
         assert genome.is_indexed == True

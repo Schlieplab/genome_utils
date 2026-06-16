@@ -131,8 +131,13 @@ transcript = Transcript(
 
 gene.add_transcript(transcript)
 
-Exon(id="EXON001", chr=chromosome.id, start=5, end=15, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
-Exon(id="EXON002", chr=chromosome.id, start=25, end=35, strand='+', gene=gene, genome=genome).add_to_transcript(transcript)
+exon1 = Exon(id="EXON001", chr=chromosome.id, start=5, end=15, strand='+', gene=gene, genome=genome)
+exon1.add_transcript(transcript)
+transcript.add_exon(exon1)
+
+exon2 = Exon(id="EXON002", chr=chromosome.id, start=25, end=35, strand='+', gene=gene, genome=genome)
+exon2.add_transcript(transcript)
+transcript.add_exon(exon2)
 
 
 genome.index()

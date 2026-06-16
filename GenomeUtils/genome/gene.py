@@ -56,6 +56,15 @@ class Gene(GenomeElement):
     
     @property
     def sequence(self) -> Seq:
+        """
+        Returns the pre-mRNA sequence of the gene.
+        
+        The pre-mRNA (precursor mRNA) is the complete genomic sequence spanning
+        from the gene's start to end position, including all introns and exons.
+        
+        Returns:
+            The pre-mRNA sequence as a Bio.Seq object.
+        """
         return self.get_chromosome().get_subsequence_by_locus(self.locus)
     
     @property

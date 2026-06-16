@@ -63,12 +63,10 @@ class Exon(GenomeElement):
             raise AttributeError("Exon is not associated with any transcripts.")
         return self._transcripts
     
-    def add_to_transcript(self, transcript: "Transcript"):
-        """Add the exon to the transcript."""
+    def add_transcript(self, transcript: "Transcript"):
+        """Add a transcript to the exon's transcript list."""
         if transcript not in self._transcripts:
             self._transcripts.append(transcript)
-        if self not in transcript.exons:
-            transcript.add_exon(self)
     
     def get_gene(self) -> "Gene":
         """Returns the `Gene` object that the exon belongs to."""

@@ -49,7 +49,6 @@ def _get_default_chromosomes_for_species(species: str) -> set[str]:
         # Mouse: 1-19, X, Y, M, MT
         standard_set = {str(i) for i in range(1, 20)} | {'X', 'Y', 'M', 'MT'}
     else:
-        # Default to human if species not recognized
         raise ValueError(f"Species '{species}' not recognized. Please use a supported species.")
     
     # Return both with and without 'chr' prefix
@@ -84,7 +83,7 @@ class GenomeBuilder:
     Example::
 
         builder = GenomeBuilder(id="hg38", species="homo_sapiens", name="Human Reference Genome")
-        genome = (
+        genome, scaffold_genome = (
             builder.with_dna_fasta(Path("path/to/dna.fa"))
             .with_cdna_fasta(Path("path/to/cdna.fa"))
             .with_gtf_file(Path("path/to/annotations.gtf"))
@@ -131,7 +130,7 @@ class GenomeBuilder:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         if self._separate_scaffolds:
-            self.logger.info("Scaffold separation enabled. `build()` will return (main_genome, scaffold_genome).")
+            self.logger.info("Scaffold separation enabled.")
             self._scaffold_genome = Genome(
                 id=f"{id}_scaffolds",
                 species=species,
@@ -171,7 +170,7 @@ class GenomeBuilder:
                         shutil.copyfileobj(gz_in, f_out)
                 dna_file_to_use = extracted_path
 
-        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}...")
+        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}")
 
         dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
         
@@ -199,7 +198,7 @@ class GenomeBuilder:
         if self._cdna_records:
             raise BuilderStateError("with_cdna_fasta() has already been called.")
         
-        self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}...")
+        self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}")
         
         open_func = gzip.open if str(cdna_fasta_path).endswith('.gz') else open
         with open_func(cdna_fasta_path, "rt") as handle:
@@ -221,16 +220,30 @@ class GenomeBuilder:
         if self._genes_map:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
-        self.logger.info(f"Processing annotations from {gtf_path}...")
+        self.logger.info(f"Processing annotations from {gtf_path}")
+        gtf_file_to_use = gtf_path
+        
+        if str(gtf_path).endswith('.gz'):
+            extracted_path = gtf_path.with_suffix('')
+            
+            if extracted_path.exists():
+                self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
+                gtf_file_to_use = extracted_path
+            else:
+                self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
+                with gzip.open(gtf_path, 'rt') as gz_file:
+                    with open(extracted_path, 'w') as out_file:
+                        out_file.write(gz_file.read())
+                gtf_file_to_use = extracted_path
 
-        gtf_db_path = gtf_path.with_suffix('.db')
+        gtf_db_path = gtf_file_to_use.with_suffix(gtf_file_to_use.suffix + ".db")
 
         if gtf_db_path.exists():
             self.logger.info(f"Loading existing gffutils database: {gtf_db_path}")
             try:
                 db = gffutils.FeatureDB(str(gtf_db_path))
             except Exception as e:
-                self.logger.warning(f"Error loading existing gffutils database: {e}. Creating new database.")
+                self.logger.warning(f"Error loading existing gffutils database: {e}. Recreating it.")
                 gtf_db_path.unlink()
                 db = gffutils.create_db(str(gtf_path), 
                                         dbfn=str(gtf_db_path), 
@@ -240,21 +253,7 @@ class GenomeBuilder:
                                         disable_infer_genes=True, 
                                         disable_infer_transcripts=True)
         else:
-            self.logger.info(f"Database not found. Creating new database at: {gtf_db_path}")
-            gtf_file_to_use = gtf_path
-            
-            if str(gtf_path).endswith('.gz'):
-                extracted_path = gtf_path.with_suffix('')
-                
-                if extracted_path.exists():
-                    self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
-                    gtf_file_to_use = extracted_path
-                else:
-                    self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
-                    with gzip.open(gtf_path, 'rt') as gz_file:
-                        with open(extracted_path, 'w') as out_file:
-                            out_file.write(gz_file.read())
-                    gtf_file_to_use = extracted_path
+            self.logger.info(f"Database not found. Creating new database.")
             
             db = gffutils.create_db(
                     str(gtf_file_to_use),
@@ -265,8 +264,8 @@ class GenomeBuilder:
                     disable_infer_genes=True,
                     disable_infer_transcripts=True
             )
+            self.logger.info(f"GTF database created at: {gtf_db_path}")
 
-        logging.info(f"GTF database created at: {gtf_db_path}")
         
         self._create_genes(db)
 
@@ -378,19 +377,26 @@ class GenomeBuilder:
             if transcript_id and transcript_id in self._transcripts_map:
                 transcript = self._transcripts_map[transcript_id]
                 if exon_id in exons_map:
-                    exons_map[exon_id].add_to_transcript(transcript)
+                    exon = exons_map[exon_id]
+                    exon.add_transcript(transcript)
+                    transcript.add_exon(exon)
                 else:
                     exon = Exon(id=exon_id, chr=transcript.chr, start=start, end=end, strand=strand, gene=transcript.get_gene(),
                                 genome=self._genome,
                                 **attributes)
-                    exon.add_to_transcript(transcript)
+                    exon.add_transcript(transcript)
+                    transcript.add_exon(exon)
                     exons_map[exon_id] = exon
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
 
-    def build(self) -> Genome | tuple[Genome, Genome]:
+    def build(self) -> tuple[Genome, Genome | None]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
+        
+        Returns:
+            A tuple of (genome, scaffold_genome). If scaffold separation was disabled,
+            scaffold_genome will be None.
         """
         if not self._genes_map:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
@@ -405,11 +411,7 @@ class GenomeBuilder:
         
         self._offload_memory()
         
-
-        if self._scaffold_genome:
-            return self._genome, self._scaffold_genome
-        
-        return self._genome
+        return self._genome, self._scaffold_genome
 
     def _offload_memory(self):
         """Clears large data structures from memory after the build is complete."""

@@ -337,11 +337,12 @@ TTTTAAAACCCCGGGGTTTTAAAA
         # Mock at least one gene to satisfy build requirements
         builder._genes_map = {"GENE001": Mock()}
         
-        genome = builder.build()
+        genome, scaffold_genome = builder.build()
         
         assert isinstance(genome, Genome)
         assert genome.id == "test"
         assert genome.is_indexed == True
+        assert scaffold_genome is None  # No scaffolds when separate_scaffolds=False
 
     @patch('GenomeUtils.genome.builder.gffutils')
     def test_build_success_with_scaffolds(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):
@@ -377,10 +378,8 @@ TTTTAAAACCCCGGGGTTTTAAAA
         # Mock at least one gene to satisfy build requirements
         builder._genes_map = {"GENE001": Mock()}
         
-        result = builder.build()
+        main_genome, scaffold_genome = builder.build()
         
-        assert isinstance(result, tuple)
-        main_genome, scaffold_genome = result
         assert isinstance(main_genome, Genome)
         assert isinstance(scaffold_genome, Genome)
         assert main_genome.id == "test"
@@ -466,7 +465,7 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
             separate_scaffolds=False
         )
         
-        genome = (builder
+        genome, scaffold_genome = (builder
                  .set_chromosome_filter(["chr1"])
                  .with_dna_fasta(fasta_file)
                  .with_cdna_fasta(cdna_file)
@@ -475,6 +474,7 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         
         # Verify genome structure
         assert isinstance(genome, Genome)
+        assert scaffold_genome is None  # No scaffolds when separate_scaffolds=False
         assert len(genome.chromosomes) == 1
         assert genome.chromosome_by_id("chr1") is not None
         
@@ -540,12 +540,15 @@ chr1	test	exon	30	40	.	+	.	gene_id "GENE001"; transcript_id "TRANS002"; exon_id 
             separate_scaffolds=False
         )
         
-        genome = (builder
+        genome, scaffold_genome = (builder
                  .set_chromosome_filter(["chr1"])
                  .with_dna_fasta(fasta_file)
                  .with_cdna_fasta(cdna_file)
                  .with_gtf_file(gtf_file)
                  .build())
+        
+        # Verify no scaffolds
+        assert scaffold_genome is None
         
         # Get the gene and transcripts
         gene = genome.gene_by_id("GENE001")

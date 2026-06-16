@@ -39,6 +39,13 @@ class Locus:
     def __str__(self):
         return f"{self.chr}:{self.start}-{self.end},{self.strand}"
 
+    
+    def __eq__(self, other: Locus) -> bool:
+        return self.chr == other.chr and self.start == other.start and self.end == other.end and self.strand == other.strand
+    
+    def __hash__(self) -> int:
+        return hash((self.chr, self.start, self.end, self.strand))
+    
     def overlaps(self, other: Locus) -> bool:
         """Check if this locus overlaps with another."""
         if self.chr != other.chr:
@@ -50,6 +57,32 @@ class Locus:
         if self.chr != other.chr:
             return False
         return self.start <= other.start and self.end >= other.end 
+
     
+    @classmethod
+    def from_string(cls, string: str) -> Locus:
+        """Create a Locus from a string representation."""
+        parts = string.split(":")
+        if len(parts) != 2:
+            raise ValueError(f"Invalid locus string: {string}")
+        chr, rest = parts
+
+        strand_parts = rest.split(",")
+        if len(strand_parts) != 2:
+            raise ValueError(f"Invalid locus string: {string}")
+        coords_str, strand = strand_parts
+
+        coord_parts = coords_str.split("-")
+        if len(coord_parts) != 2:
+            raise ValueError(f"Invalid locus string: {string}")
+        start_str, end_str = coord_parts
+
+        if not start_str.isdigit() or not end_str.isdigit():
+            raise ValueError(f"Invalid locus string: {string}")
+
+        start = int(start_str)
+        end = int(end_str)
+
+        return cls(chr=chr, start=start, end=end, strand=strand)
 
     

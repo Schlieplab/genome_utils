@@ -58,6 +58,9 @@ class Chromosome(GenomeElement):
         
     @property
     def sequence(self) -> Seq:
+        """
+        Returns the sequence of the chromosome.
+        """
         return self._seq_index[self.id].seq
     
     def get_subsequence_by_locus(self, locus: Locus) -> Seq:
