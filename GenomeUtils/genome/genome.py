@@ -68,18 +68,25 @@ class Genome:
         """
         Creates an index of all genes, transcripts, and exons for fast lookup.
         This method MUST be called after all genomic features have been added.
+        When multiple genes share the same name, the first encountered is kept.
         """
+        duplicate_names: set[str] = set()
         for chrom in self._chromosomes.values():
             for gene in chrom.genes:
                 self._genes[gene.id] = gene
                 if gene.name not in self._genes_by_name:
                     self._genes_by_name[gene.name] = gene
                 else:
-                    logging.warning(f"Duplicate gene name: {gene.name}. Skipping.")
+                    duplicate_names.add(gene.name)
                 for transcript in gene.transcripts:
                     self._transcripts[transcript.id] = transcript
                     for exon in transcript.exons:
                         self._exons[exon.id] = exon
+        if duplicate_names:
+            logging.info(
+                f"Skipped duplicates for {len(duplicate_names)} gene names during indexing. "
+                "Use gene_by_id for unambiguous lookup."
+            )
         self.is_indexed = True
     
     def get_sequence_by_locus(self, locus: Locus) -> Seq:

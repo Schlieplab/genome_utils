@@ -96,19 +96,22 @@ class EnsemblGenomeDownloader(Downloader):
             'annotation': gtf_url,
         }
 
-    def download(self) -> dict[str, Path]:
+    def download(self, force: bool = False) -> dict[str, Path]:
         """
         Download DNA, cDNA, and Annotation files from Ensembl FTP.
 
         Returns:
             A dictionary mapping a file type to the local Path.
             Keys are `dna`, `cdna`, and `annotation`.
+
+        Args:
+            force: If True, redownload the files even if they already exist. Defaults to False.
         """
         urls = self.get_urls()
 
-        dna_path = self.download_file(urls['dna'], Path(urls['dna']).name)
-        cdna_path = self.download_file(urls['cdna'], Path(urls['cdna']).name)
-        annotation_path = self.download_file(urls['annotation'], Path(urls['annotation']).name)
+        dna_path = self.download_file(urls['dna'], Path(urls['dna']).name, force=force)
+        cdna_path = self.download_file(urls['cdna'], Path(urls['cdna']).name, force=force)
+        annotation_path = self.download_file(urls['annotation'], Path(urls['annotation']).name, force=force)
 
         return {
             'dna': dna_path,
