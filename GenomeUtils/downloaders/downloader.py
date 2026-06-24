@@ -3,7 +3,7 @@
 Filename: GenomeUtils/downloaders/downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.1
+Version: 0.1.2
 Description: This file defines the base Downloader class for handling file downloads.
 License: LGPL-3.0-or-later
 """

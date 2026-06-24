@@ -3,7 +3,7 @@
 Filename: tests/unit/test_ensembl_genome_downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.1
+Version: 0.1.2
 Description: Unit tests for the EnsemblGenomeDownloader class.
 License: LGPL-3.0-or-later
 """
@@ -131,7 +131,7 @@ class TestEnsemblGenomeDownloader:
             'annotation': Path('/path/to/annotation.gtf.gz')
         }
 
-        def mock_download_side_effect(url, filename):
+        def mock_download_side_effect(url, filename, force=False):
             if 'gtf' in url:
                 return mock_paths['annotation']
             elif 'cdna' in url:
@@ -144,6 +144,7 @@ class TestEnsemblGenomeDownloader:
         result = downloader.download()
 
         assert mock_download_file.call_count == 3
+        assert all(call.kwargs == {'force': False} for call in mock_download_file.call_args_list)
         assert result['dna'] == mock_paths['dna']
         assert result['cdna'] == mock_paths['cdna']
         assert result['annotation'] == mock_paths['annotation']
@@ -307,7 +308,6 @@ class TestEnsemblGenomeDownloader:
 
         assert "gtf/homo_sapiens" in gtf_url
         assert "Homo_sapiens.GRCh38.115.gtf.gz" in gtf_url
-
 
 
 
