@@ -3,7 +3,7 @@
 Filename: GenomeUtils/genome/locus.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: This file defines the Locus class, representing a genomic location.
 License: LGPL-3.0-or-later
 """
@@ -35,7 +35,7 @@ class Locus:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.chr}:{self.start}-{self.end}, strand={self.strand})"
-    
+
     def __str__(self):
         return f"{self.chr}:{self.start}-{self.end},{self.strand}"
 
@@ -84,5 +84,3 @@ class Locus:
         end = int(end_str)
 
         return cls(chr=chr, start=start, end=end, strand=strand)
-
-    

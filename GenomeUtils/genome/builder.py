@@ -3,7 +3,7 @@
 Filename: GenomeUtils/genome/builder.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: This file contains the GenomeBuilder class for constructing genome objects.
 License: LGPL-3.0-or-later
 """
@@ -15,7 +15,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional, overload
 
 import gffutils
 from Bio import SeqIO
@@ -28,6 +28,62 @@ from .exon import Exon
 from .gene import Gene
 from .genome import Genome
 from .transcript import Transcript
+
+
+logger = logging.getLogger(__name__)
+
+
+def create_gtf_database(
+    gtf_path: Path,
+    db_path: Path | None = None,
+    *,
+    force: bool = False,
+) -> tuple[gffutils.FeatureDB, Path]:
+    """Create or load a gffutils database and return it with its path."""
+    gtf_path = Path(gtf_path)
+    gtf_file_to_use = (
+        gtf_path.with_suffix("")
+        if str(gtf_path).endswith(".gz")
+        else gtf_path
+    )
+    resolved_db_path = (
+        Path(db_path)
+        if db_path is not None
+        else gtf_file_to_use.with_suffix(gtf_file_to_use.suffix + ".db")
+    )
+
+    if force and resolved_db_path.exists():
+        resolved_db_path.unlink()
+
+    if resolved_db_path.exists():
+        logger.info("Loading existing gffutils database: %s", resolved_db_path)
+        try:
+            return gffutils.FeatureDB(str(resolved_db_path)), resolved_db_path.resolve()
+        except Exception as exc:
+            logger.warning(
+                "Error loading existing gffutils database: %s. Recreating it.",
+                exc,
+            )
+            resolved_db_path.unlink()
+
+    if str(gtf_path).endswith(".gz") and not gtf_file_to_use.exists():
+        logger.info("Extracting gzipped GTF file to: %s", gtf_file_to_use)
+        with gzip.open(gtf_path, "rt") as gz_file:
+            with open(gtf_file_to_use, "w") as out_file:
+                shutil.copyfileobj(gz_file, out_file)
+
+    resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("Database not found. Creating new database at: %s", resolved_db_path)
+    db = gffutils.create_db(
+        str(gtf_file_to_use),
+        dbfn=str(resolved_db_path),
+        keep_order=False,
+        merge_strategy="error",
+        id_spec={"gene": "gene_id", "transcript": "transcript_id"},
+        disable_infer_genes=True,
+        disable_infer_transcripts=True,
+    )
+    return db, resolved_db_path.resolve()
 
 
 def _get_default_chromosomes_for_species(species: str) -> set[str]:
@@ -116,6 +172,7 @@ class GenomeBuilder:
         self._cdna_records: Dict[str, SeqRecord] = {}
         self._genes_map: Dict[str, Gene] = {}
         self._transcripts_map: Dict[str, Transcript] = {}
+        self._gtf_db_path: Optional[Path] = None
         self._chromosome_filter = None
         self._separate_scaffolds = separate_scaffolds
         self._scaffold_genome: Optional[Genome] = None
@@ -207,10 +264,20 @@ class GenomeBuilder:
         self.logger.info(f"Loaded {len(self._cdna_records)} cDNA sequences.")
         return self
 
-    def with_gtf_file(self, gtf_path: Path) -> "GenomeBuilder":
+    def with_gtf_file(
+        self,
+        gtf_path: Path,
+        db_path: Path | None = None,
+    ) -> "GenomeBuilder":
         """
         Parses a GTF file to build the gene-transcript-exon hierarchy.
         `with_dna_fasta()` and `with_cdna_fasta()` must be called before this method.
+
+        Args:
+            gtf_path: Annotation GTF, optionally gzip-compressed.
+            db_path: Existing gffutils database to reuse. If it does not exist,
+                the database is created at this path. By default it is stored
+                next to the uncompressed GTF as ``<annotation>.db``.
         """
 
         if not self._genome.chromosomes:
@@ -221,50 +288,7 @@ class GenomeBuilder:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
         self.logger.info(f"Processing annotations from {gtf_path}")
-        gtf_file_to_use = gtf_path
-        
-        if str(gtf_path).endswith('.gz'):
-            extracted_path = gtf_path.with_suffix('')
-            
-            if extracted_path.exists():
-                self.logger.info(f"Using existing extracted GTF file: {extracted_path}")
-                gtf_file_to_use = extracted_path
-            else:
-                self.logger.info(f"Extracting gzipped GTF file to: {extracted_path}")
-                with gzip.open(gtf_path, 'rt') as gz_file:
-                    with open(extracted_path, 'w') as out_file:
-                        out_file.write(gz_file.read())
-                gtf_file_to_use = extracted_path
-
-        gtf_db_path = gtf_file_to_use.with_suffix(gtf_file_to_use.suffix + ".db")
-
-        if gtf_db_path.exists():
-            self.logger.info(f"Loading existing gffutils database: {gtf_db_path}")
-            try:
-                db = gffutils.FeatureDB(str(gtf_db_path))
-            except Exception as e:
-                self.logger.warning(f"Error loading existing gffutils database: {e}. Recreating it.")
-                gtf_db_path.unlink()
-                db = gffutils.create_db(str(gtf_path), 
-                                        dbfn=str(gtf_db_path), 
-                                        keep_order=False, 
-                                        merge_strategy='error', 
-                                        id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'}, 
-                                        disable_infer_genes=True, 
-                                        disable_infer_transcripts=True)
-        else:
-            self.logger.info(f"Database not found. Creating new database.")
-            
-            db = gffutils.create_db(
-                    str(gtf_file_to_use),
-                    dbfn=str(gtf_db_path),
-                    keep_order=False,
-                    merge_strategy='error',
-                    id_spec={'gene': 'gene_id', 'transcript': 'transcript_id'},
-                    disable_infer_genes=True,
-                    disable_infer_transcripts=True
-            )
-            self.logger.info(f"GTF database created at: {gtf_db_path}")
+        db, self._gtf_db_path = create_gtf_database(gtf_path, db_path)
 
         
         self._create_genes(db)
@@ -390,13 +414,29 @@ class GenomeBuilder:
             else:
                 self.logger.warning(f"Transcript '{transcript_id}' for exon '{e_id}' not found. Skipping exon.")
 
-    def build(self) -> tuple[Genome, Genome | None]:
+    @overload
+    def build(self, output_db: Literal[False] = False) -> tuple[Genome, Genome | None]:
+        ...
+
+    @overload
+    def build(self, output_db: Literal[True]) -> tuple[Genome, Genome | None, Path]:
+        ...
+
+    def build(
+        self,
+        output_db: bool = False,
+    ) -> tuple[Genome, Genome | None] | tuple[Genome, Genome | None, Path]:
         """
         Finalizes the Genome object by creating an index for fast lookups.
+
+        Args:
+            output_db: Include the annotation database path in the returned
+                tuple when true. Defaults to false for API compatibility.
         
         Returns:
-            A tuple of (genome, scaffold_genome). If scaffold separation was disabled,
-            scaffold_genome will be None.
+            A tuple of (genome, scaffold_genome). If ``output_db`` is true, the
+            tuple also contains the database path. If scaffold separation was
+            disabled, scaffold_genome will be None.
         """
         if not self._genes_map:
             raise BuilderStateError("Cannot build Genome. GTF data is missing. "
@@ -411,6 +451,10 @@ class GenomeBuilder:
         
         self._offload_memory()
         
+        if output_db:
+            if self._gtf_db_path is None:
+                raise BuilderStateError("Cannot output GTF database path before loading GTF data.")
+            return self._genome, self._scaffold_genome, self._gtf_db_path
         return self._genome, self._scaffold_genome
 
     def _offload_memory(self):

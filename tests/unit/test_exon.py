@@ -3,7 +3,7 @@
 Filename: tests/unit/test_exon.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Unit tests for the Exon class.
 License: LGPL-3.0-or-later
 """
@@ -734,6 +734,5 @@ class TestExon:
         assert len(exon_transcripts) == 5
         for i, t in enumerate(transcripts):
             assert exon_transcripts[i] is t
-
 
 

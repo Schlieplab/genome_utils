@@ -3,7 +3,7 @@
 Filename: GenomeUtils/genome/exon.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: This file defines the Exon class, representing a biological exon.
 License: LGPL-3.0-or-later
 """
@@ -84,10 +84,9 @@ class Exon(GenomeElement):
 
         transcript = transcripts[0]
         exon_index = transcript.exons.index(self)
- 
+
         start_in_transcript = sum(len(exon) for exon in transcript.exons[:exon_index])
         end_in_transcript = start_in_transcript + len(self)
-        
+
         return transcript.sequence[start_in_transcript:end_in_transcript]
-    
-    
+

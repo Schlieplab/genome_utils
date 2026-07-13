@@ -3,7 +3,7 @@
 Filename: tests/conftest.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Configuration and fixtures for genome_utils tests.
 License: LGPL-3.0-or-later
 """
@@ -262,7 +262,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "slow: Slow tests that might download data")
     config.addinivalue_line("markers", "network: Tests that require network access")
-
 
 
 

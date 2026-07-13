@@ -3,7 +3,7 @@
 Filename: tests/unit/test_genome.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Unit tests for the Genome class.
 License: LGPL-3.0-or-later
 """
@@ -505,7 +505,6 @@ class TestGenome:
         assert len(genome._genes) == 0
         assert len(genome._transcripts) == 0
         assert len(genome._exons) == 0
-
 
 
 

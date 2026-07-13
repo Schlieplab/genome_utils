@@ -3,7 +3,7 @@
 Filename: GenomeUtils/downloaders/genome_downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: This file defines the abstract base class for genome downloaders.
 License: LGPL-3.0-or-later
 """
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..genome.builder import create_gtf_database
 from .downloader import Downloader
 
 
@@ -96,16 +97,24 @@ class EnsemblGenomeDownloader(Downloader):
             'annotation': gtf_url,
         }
 
-    def download(self, force: bool = False) -> dict[str, Path]:
+    def download(
+        self,
+        force: bool = False,
+        output_db: bool = False,
+    ) -> dict[str, Path]:
         """
         Download DNA, cDNA, and Annotation files from Ensembl FTP.
 
         Returns:
             A dictionary mapping a file type to the local Path.
-            Keys are `dna`, `cdna`, and `annotation`.
+            Keys are `dna`, `cdna`, and `annotation`. When ``output_db`` is
+            true, the returned mapping also contains the annotation database
+            path under the `db` key.
 
         Args:
             force: If True, redownload the files even if they already exist. Defaults to False.
+            output_db: If True, create a reusable gffutils annotation database
+                and include its path in the returned mapping.
         """
         urls = self.get_urls()
 
@@ -113,8 +122,12 @@ class EnsemblGenomeDownloader(Downloader):
         cdna_path = self.download_file(urls['cdna'], Path(urls['cdna']).name, force=force)
         annotation_path = self.download_file(urls['annotation'], Path(urls['annotation']).name, force=force)
 
-        return {
+        paths = {
             'dna': dna_path,
             'cdna': cdna_path,
             'annotation': annotation_path,
         }
+        if output_db:
+            _, db_path = create_gtf_database(annotation_path, force=force)
+            paths['db'] = db_path
+        return paths

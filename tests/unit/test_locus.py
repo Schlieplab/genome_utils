@@ -3,7 +3,7 @@
 Filename: tests/unit/test_locus.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Unit tests for the Locus class.
 License: LGPL-3.0-or-later
 """
@@ -318,5 +318,4 @@ class TestLocus:
         for s in invalid_strings:
             with pytest.raises(ValueError, match="Invalid locus string"):
                 Locus.from_string(s)
-
 

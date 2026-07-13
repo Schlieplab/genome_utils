@@ -3,13 +3,13 @@
 Filename: tests/unit/test_ensembl_genome_downloader.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Unit tests for the EnsemblGenomeDownloader class.
 License: LGPL-3.0-or-later
 """
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -148,6 +148,33 @@ class TestEnsemblGenomeDownloader:
         assert result['dna'] == mock_paths['dna']
         assert result['cdna'] == mock_paths['cdna']
         assert result['annotation'] == mock_paths['annotation']
+
+    @patch('GenomeUtils.downloaders.genome_downloader.create_gtf_database')
+    @patch.object(EnsemblGenomeDownloader, 'download_file')
+    def test_download_can_output_database_path(
+        self,
+        mock_download_file,
+        mock_create_gtf_database,
+        tmp_path,
+    ):
+        """output_db adds the reusable annotation database to returned paths."""
+        downloader = EnsemblGenomeDownloader(
+            assembly_id="GRCh38",
+            ensembl_release=110,
+            species="homo_sapiens",
+            genomes_root_dir=tmp_path,
+        )
+        dna_path = tmp_path / "dna.fa.gz"
+        cdna_path = tmp_path / "cdna.fa.gz"
+        annotation_path = tmp_path / "annotation.gtf.gz"
+        db_path = tmp_path / "annotation.gtf.db"
+        mock_download_file.side_effect = [dna_path, cdna_path, annotation_path]
+        mock_create_gtf_database.return_value = (Mock(), db_path)
+
+        result = downloader.download(force=True, output_db=True)
+
+        mock_create_gtf_database.assert_called_once_with(annotation_path, force=True)
+        assert result["db"] == db_path
 
     @patch.object(EnsemblGenomeDownloader, 'download_file')
     def test_download_different_species(self, mock_download_file):
@@ -308,6 +335,3 @@ class TestEnsemblGenomeDownloader:
 
         assert "gtf/homo_sapiens" in gtf_url
         assert "Homo_sapiens.GRCh38.115.gtf.gz" in gtf_url
-
-
-

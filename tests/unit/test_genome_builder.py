@@ -3,7 +3,7 @@
 Filename: tests/unit/test_genome_builder.py
 Author: Arash Ayat
 Copyright: 2025, Alexander Schliep
-Version: 0.1.2
+Version: 0.1.3
 Description: Unit tests for the GenomeBuilder class.
 License: LGPL-3.0-or-later
 """
@@ -302,6 +302,52 @@ TTTTAAAACCCCGGGGTTTTAAAA
         
         with pytest.raises(BuilderStateError, match="Cannot build Genome.*GTF data is missing"):
             builder.build()
+
+    def test_build_can_return_database_path(self, tmp_path):
+        """The optional database output does not change the default build API."""
+        db_path = tmp_path / "annotations.gtf.db"
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
+        builder._genes_map = {"GENE001": Mock()}
+        builder._gtf_db_path = db_path
+
+        genome, scaffold_genome, returned_db_path = builder.build(output_db=True)
+
+        assert genome.id == "test"
+        assert scaffold_genome is None
+        assert returned_db_path == db_path
+
+    @patch('GenomeUtils.genome.builder.gffutils')
+    def test_with_gtf_file_uses_explicit_database_path(
+        self,
+        mock_gffutils,
+        temp_dir,
+        sample_fasta_content,
+        sample_cdna_content,
+    ):
+        """An explicit database is loaded without reading or recreating the GTF."""
+        fasta_file = temp_dir / "test.fa"
+        fasta_file.write_text(sample_fasta_content)
+        cdna_file = temp_dir / "cdna.fa"
+        cdna_file.write_text(sample_cdna_content)
+        db_path = temp_dir / "provided.db"
+        db_path.touch()
+
+        mock_db = Mock()
+        mock_db.conn.execute.side_effect = lambda query: (
+            Mock(fetchone=Mock(return_value=(0,)))
+            if "count(*)" in query
+            else []
+        )
+        mock_gffutils.FeatureDB.return_value = mock_db
+
+        builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
+        builder.with_dna_fasta(fasta_file)
+        builder.with_cdna_fasta(cdna_file)
+        builder.with_gtf_file(temp_dir / "missing.gtf.gz", db_path=db_path)
+
+        mock_gffutils.FeatureDB.assert_called_once_with(str(db_path))
+        mock_gffutils.create_db.assert_not_called()
+        assert builder._gtf_db_path == db_path.resolve()
 
     @patch('GenomeUtils.genome.builder.gffutils')
     def test_build_success_single_genome(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):
