@@ -10,8 +10,6 @@ License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 from Bio.Seq import Seq
 
 from .chromosome import Chromosome
@@ -25,6 +23,16 @@ import logging
 
 class Genome:
     """Represents a Genome object, includes a collection of chromosomes, genes, transcripts, and exons."""
+
+    id: str
+    species: str
+    name: str
+    _chromosomes: dict[str, Chromosome]
+    _genes: dict[str, Gene]
+    _genes_by_name: dict[str, Gene]
+    _transcripts: dict[str, Transcript]
+    _exons: dict[str, Exon]
+    is_indexed: bool
 
     def __init__(self, id: str, species: str, name: str, **kwargs):
         """
@@ -43,12 +51,12 @@ class Genome:
         for key, value in kwargs.items():
             setattr(self, key, value)
         
-        self._chromosomes: Dict[str, Chromosome] = {}
-        self._genes: Dict[str, Gene] = {}
-        self._genes_by_name: Dict[str, Gene] = {}
-        self._transcripts: Dict[str, Transcript] = {}
-        self._exons: Dict[str, Exon] = {}
-        self.is_indexed: bool = False
+        self._chromosomes = {}
+        self._genes = {}
+        self._genes_by_name = {}
+        self._transcripts = {}
+        self._exons = {}
+        self.is_indexed = False
 
 
     def __repr__(self) -> str:
@@ -98,25 +106,25 @@ class Genome:
 
 
     @property
-    def chromosomes(self) -> List[Chromosome]:
+    def chromosomes(self) -> list[Chromosome]:
         """Get all chromosomes in the genome."""
         return list(self._chromosomes.values())
 
 
     @property
-    def genes(self) -> List[Gene]:
+    def genes(self) -> list[Gene]:
         """Get all genes in the genome."""
         return list(self._genes.values())
 
     
     @property
-    def transcripts(self) -> List[Transcript]:
+    def transcripts(self) -> list[Transcript]:
         """Get all transcripts in the genome."""
         return list(self._transcripts.values())
 
 
     @property
-    def exons(self) -> List[Exon]:
+    def exons(self) -> list[Exon]:
         """Get all exons in the genome."""
         return list(self._exons.values())
 

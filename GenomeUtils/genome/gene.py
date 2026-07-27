@@ -10,12 +10,12 @@ License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import List, Literal, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 
 from Bio.Seq import Seq
 
 from .genome_element import GenomeElement
-from .locus import Locus
+from .locus import Locus, Strand
 
 
 if TYPE_CHECKING:
@@ -26,15 +26,17 @@ if TYPE_CHECKING:
 class Gene(GenomeElement):
     """Represents a gene."""
 
+    name: str
+
     def __init__(self, 
                  id: str, 
                  name: str,
                  chr: str,
                  start: int, 
                  end: int, 
-                 strand: Literal["+", "-"], 
-                 chromosome: "Chromosome" = None, 
-                 genome: "Genome" = None,
+                 strand: Strand,
+                 chromosome: Chromosome | None = None,
+                 genome: Genome | None = None,
                  **kwargs):
         """
         Initializes a Gene object.
@@ -68,14 +70,14 @@ class Gene(GenomeElement):
         return self.get_chromosome().get_subsequence_by_locus(self.locus)
     
     @property
-    def transcripts(self) -> List["Transcript"]:
-        return self._children
+    def transcripts(self) -> list[Transcript]:
+        return cast("list[Transcript]", self._children)
 
     def add_transcript(self, transcript: "Transcript"):
         """Add a transcript to the gene."""
         self._children.append(transcript)
-        self._genome.is_indexed = False
+        cast("Genome", self._genome).is_indexed = False
     
     def get_chromosome(self) -> "Chromosome":
         """Returns the `Chromosome` object that this gene is on."""
-        return self.parent
+        return cast("Chromosome", self.parent)

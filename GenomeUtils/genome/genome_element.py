@@ -11,11 +11,11 @@ License: LGPL-3.0-or-later
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from Bio.Seq import Seq
 
-from .locus import Locus
+from .locus import Locus, Strand
 
 
 if TYPE_CHECKING:
@@ -24,11 +24,17 @@ if TYPE_CHECKING:
 class GenomeElement(ABC):
     """Abstract base class for genomic elements (e.g. chromosomes, genes, transcripts, exons, etc.)."""
 
+    id: str
+    locus: Locus
+    _parent: GenomeElement | None
+    _children: list[GenomeElement]
+    _genome: Genome | None
+
     def __init__(self, 
                  id: str, 
                  locus: Locus,
-                 parent: Optional[GenomeElement] = None,
-                 genome: "Genome" = None,
+                 parent: GenomeElement | None = None,
+                 genome: Genome | None = None,
                  **kwargs):
         """
         Initializes the GenomeElement.
@@ -43,8 +49,8 @@ class GenomeElement(ABC):
         self.id = id
         self.locus = locus
         self._parent = parent
-        self._children: List[GenomeElement] = []
-        self._genome: "Genome" = genome
+        self._children = []
+        self._genome = genome
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -70,7 +76,7 @@ class GenomeElement(ABC):
         return self._parent
 
     @property
-    def strand(self) -> str:
+    def strand(self) -> Strand:
         return self.locus.strand
 
     def __len__(self) -> int:

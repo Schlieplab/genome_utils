@@ -15,7 +15,7 @@ from .exon import Exon
 from .gene import Gene
 from .genome import Genome
 from .genome_element import GenomeElement
-from .locus import Locus
+from .locus import Locus, Strand
 from .transcript import Transcript
 
 __all__ = [
@@ -26,5 +26,6 @@ __all__ = [
     "Genome",
     "GenomeElement",
     "Locus",
+    "Strand",
     "Transcript",
 ]

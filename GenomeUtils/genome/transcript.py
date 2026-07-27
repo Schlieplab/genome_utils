@@ -10,12 +10,12 @@ License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import cast, TYPE_CHECKING
 
 from Bio.Seq import Seq
 
 from .genome_element import GenomeElement
-from .locus import Locus
+from .locus import Locus, Strand
 
 
 if TYPE_CHECKING:
@@ -26,15 +26,18 @@ if TYPE_CHECKING:
 class Transcript(GenomeElement):
     """Represents a transcript."""
 
+    _sequence: Seq
+    _exons: list[Exon]
+
     def __init__(self, 
                  id: str, 
                  chr: str,
                  start: int, 
                  end: int, 
-                 strand: str, 
+                 strand: Strand,
                  sequence: Seq,
-                 gene: "Gene" = None, 
-                 genome: "Genome" = None,
+                 gene: Gene | None = None,
+                 genome: Genome | None = None,
                  **kwargs):
         """
         Initializes a Transcript object.
@@ -51,7 +54,7 @@ class Transcript(GenomeElement):
             kwargs: Additional keyword arguments.
         """
         self._sequence = sequence
-        self._exons: List["Exon"] = []
+        self._exons = []
         locus = Locus(chr, start, end, strand)
         super().__init__(id, locus, gene, genome, **kwargs)
         
@@ -61,7 +64,7 @@ class Transcript(GenomeElement):
     
     
     @property
-    def exons(self) -> List["Exon"]:
+    def exons(self) -> list[Exon]:
         """Returns the list of exons associated with this transcript."""
         return self._exons
 
@@ -82,18 +85,22 @@ class Transcript(GenomeElement):
                 pos += 1
         self._exons.insert(pos, exon)
         
-        self._genome.is_indexed = False
+        cast("Genome", self._genome).is_indexed = False
 
     
     def get_gene(self) -> "Gene":
         """Returns the `Gene` object that this transcript is associated with."""
-        return self.parent
+        return cast("Gene", self.parent)
     
-    def exon_intervals(self) -> List[Tuple[int, int]]:
+    def exon_intervals(self) -> list[tuple[int, int]]:
         """Get the exon intervals for this transcript."""
         return [(exon.start, exon.end) for exon in self.exons]
     
-    def transcript_to_genomic_pos(self, start: int, end: Optional[int] = None) -> Union[Locus, List[Locus], None]:
+    def transcript_to_genomic_pos(
+        self,
+        start: int,
+        end: int | None = None,
+    ) -> Locus | list[Locus] | None:
         """
         Converts a 0-based, half-open transcript coordinate (or range) to a
         1-based, inclusive genomic coordinate (or list of Locus objects).

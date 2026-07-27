@@ -10,12 +10,12 @@ License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import Literal, TYPE_CHECKING, List
+from typing import cast, TYPE_CHECKING
 
 from Bio.Seq import Seq
 
 from .genome_element import GenomeElement
-from .locus import Locus
+from .locus import Locus, Strand
 
 
 if TYPE_CHECKING:
@@ -25,16 +25,20 @@ if TYPE_CHECKING:
     
 class Exon(GenomeElement):
     """Represents an exon."""
+
+    _transcripts: list[Transcript]
+    _sequence: Seq | None
+
     def __init__(self, 
                  id: str, 
                  chr: str,
                  start: int, 
                  end: int, 
-                 strand: Literal["+", "-"], 
-                 gene: "Gene" = None, 
-                 transcripts: List["Transcript"] = None,
-                 genome: "Genome" = None,
-                 sequence: Seq = None,
+                 strand: Strand,
+                 gene: Gene | None = None,
+                 transcripts: list[Transcript] | None = None,
+                 genome: Genome | None = None,
+                 sequence: Seq | None = None,
                  **kwargs):
         """
         Initializes an Exon object.
@@ -57,7 +61,7 @@ class Exon(GenomeElement):
         super().__init__(id, locus, gene, genome, **kwargs)
 
     
-    def get_transcripts(self) -> List["Transcript"]:
+    def get_transcripts(self) -> list[Transcript]:
         """Returns the `Transcript` object that the exon belongs to."""
         if len(self._transcripts) == 0:
             raise AttributeError("Exon is not associated with any transcripts.")
@@ -70,7 +74,7 @@ class Exon(GenomeElement):
     
     def get_gene(self) -> "Gene":
         """Returns the `Gene` object that the exon belongs to."""
-        return self.parent
+        return cast("Gene", self.parent)
     
     @property
     def sequence(self) -> Seq:
@@ -89,4 +93,3 @@ class Exon(GenomeElement):
         end_in_transcript = start_in_transcript + len(self)
 
         return transcript.sequence[start_in_transcript:end_in_transcript]
-

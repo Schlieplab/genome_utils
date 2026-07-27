@@ -16,6 +16,17 @@ from .genome import Gene
 from .genome import Genome
 from .genome import GenomeElement
 from .genome import Locus
+from .genome import Strand
 from .genome import Transcript
 
-__all__ = ["Genome", "Gene", "Transcript", "Exon", "Chromosome", "Locus", "GenomeElement", "GenomeBuilder"]
+__all__ = [
+    "Genome",
+    "Gene",
+    "Transcript",
+    "Exon",
+    "Chromosome",
+    "Locus",
+    "Strand",
+    "GenomeElement",
+    "GenomeBuilder",
+]

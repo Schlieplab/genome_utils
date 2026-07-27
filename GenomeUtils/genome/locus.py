@@ -11,16 +11,20 @@ License: LGPL-3.0-or-later
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import cast, Literal
+
+
+Strand = Literal["+", "-"]
 
 
 @dataclass(frozen=True, order=True)
 class Locus:
     """Represents a 1-based inclusive genomic coordinates on a chromosome."""
+
     chr: str
     start: int
     end: int
-    strand: Literal["+", "-"] = "+"
+    strand: Strand = "+"
 
     def __post_init__(self):
         """Validate coordinates after initialization."""
@@ -83,4 +87,4 @@ class Locus:
         start = int(start_str)
         end = int(end_str)
 
-        return cls(chr=chr, start=start, end=end, strand=strand)
+        return cls(chr=chr, start=start, end=end, strand=cast(Strand, strand))

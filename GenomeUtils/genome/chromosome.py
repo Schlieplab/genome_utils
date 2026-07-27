@@ -10,10 +10,11 @@ License: LGPL-3.0-or-later
 
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from collections.abc import Mapping
+from typing import cast, TYPE_CHECKING
 
-from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from .genome_element import GenomeElement
 from .locus import Locus
@@ -26,11 +27,13 @@ if TYPE_CHECKING:
 class Chromosome(GenomeElement):
     """Represents a chromosome, with sequence data loaded from file on demand."""
 
+    _seq_index: Mapping[str, SeqRecord]
+
     def __init__(self, 
                  id: str, 
-                 seq_index: SeqIO.index, 
-                 genome: "Genome" = None,
-                 length: int = None,
+                 seq_index: Mapping[str, SeqRecord],
+                 genome: Genome | None = None,
+                 length: int | None = None,
                  **kwargs):
         """
         Initializes a Chromosome object.
@@ -50,11 +53,11 @@ class Chromosome(GenomeElement):
         
     def add_gene(self, gene: "Gene"):
         self._children.append(gene) 
-        self._genome.is_indexed = False
+        cast("Genome", self._genome).is_indexed = False
         
     @property
-    def genes(self) -> List["Gene"]:
-        return self._children
+    def genes(self) -> list[Gene]:
+        return cast("list[Gene]", self._children)
         
     @property
     def sequence(self) -> Seq:
