@@ -184,4 +184,4 @@ Find the technical documentation [here](https://schlieplab.github.io/genome_util
 
 Issues and PRs are welcome.
 
-Copyright 2025, Alexander Schliep
+Copyright 2026, Alexander Schliep
