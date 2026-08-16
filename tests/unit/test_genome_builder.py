@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from GenomeUtils.genome.builder import BuilderStateError, _strip_version
-from GenomeUtils.Genome import Genome, GenomeBuilder, Locus
+from GenomeUtils.Genome import Genome, GenomeBuilder, Locus, TranscriptLocus
 
 
 class TestGenomeBuilder:
@@ -550,12 +550,16 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
 
         assert len(transcript.sequence) == sum(len(exon) for exon in transcript.exons)
 
-        first_exon_loci = transcript.segment_to_loci(2, 7)
+        first_exon_loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 2, 7)
+        )
         assert isinstance(first_exon_loci, list)
         assert all(isinstance(locus, Locus) for locus in first_exon_loci)
         assert first_exon_loci == [Locus("chr1", 17, 21, "+")]
 
-        junction_loci = transcript.segment_to_loci(8, 15)
+        junction_loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 8, 15)
+        )
         assert isinstance(junction_loci, list)
         assert all(isinstance(locus, Locus) for locus in junction_loci)
         assert junction_loci == [

@@ -18,11 +18,13 @@ from .genome import GenomeElement
 from .genome import Locus
 from .genome import Strand
 from .genome import Transcript
+from .genome import TranscriptLocus
 
 __all__ = [
     "Genome",
     "Gene",
     "Transcript",
+    "TranscriptLocus",
     "Exon",
     "Chromosome",
     "Locus",

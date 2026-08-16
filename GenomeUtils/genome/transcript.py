@@ -16,6 +16,7 @@ from Bio.Seq import Seq
 
 from .genome_element import GenomeElement
 from .locus import Locus, Strand
+from .transcript_locus import TranscriptLocus
 
 
 if TYPE_CHECKING:
@@ -96,21 +97,22 @@ class Transcript(GenomeElement):
         """Get the exon intervals for this transcript."""
         return [(exon.start, exon.end) for exon in self.exons]
     
-    def segment_to_loci(
+    def to_genomic_loci(
         self,
-        start: int,
-        end: int,
+        transcript_locus: TranscriptLocus,
     ) -> list[Locus]:
-        """Convert a transcript segment to genomic loci.
+        """Project a transcript locus onto genomic loci.
 
         Args:
-            start: The 0-based, inclusive segment start on the spliced transcript.
-            end: The 0-based, exclusive segment end on the spliced transcript.
+            transcript_locus: A 0-based, half-open locus on this transcript.
 
         Returns:
             One 1-based, inclusive locus per contributing exon, in 5'-to-3'
             transcript order.
         """
+        if transcript_locus.transcript_id != self.id:
+            raise ValueError("Transcript locus ID must match transcript ID.")
+
         if not self.exons:
             raise ValueError("Transcript must have at least one exon.")
 
@@ -128,6 +130,8 @@ class Transcript(GenomeElement):
         if sum(len(exon) for exon in self.exons) != len(self.sequence):
             raise ValueError("Sum of exon lengths must equal transcript sequence length.")
 
+        start = transcript_locus.start
+        end = transcript_locus.end
         if not 0 <= start < end <= len(self.sequence):
             raise ValueError(f"Transcript segment [{start}, {end}) is out of bounds.")
 

@@ -13,7 +13,7 @@ from unittest.mock import Mock
 import pytest
 from Bio.Seq import Seq
 
-from GenomeUtils.Genome import Locus, Transcript
+from GenomeUtils.Genome import Locus, Transcript, TranscriptLocus
 
 
 class TestTranscript:
@@ -257,28 +257,34 @@ class TestTranscript:
         expected = [(1100, 1200), (1500, 1600), (1700, 1800)]
         assert intervals == expected
 
-    def test_segment_to_loci_inside_one_exon_positive_strand(self):
+    def test_to_genomic_loci_inside_one_exon_positive_strand(self):
         transcript = self.create_segment_transcript()
 
-        loci = transcript.segment_to_loci(10, 20)
+        loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 10, 20)
+        )
 
         assert isinstance(loci, list)
         assert loci == [Locus("chr1", 1110, 1119, "+")]
 
-    def test_segment_to_loci_crosses_two_exons_positive_strand(self):
+    def test_to_genomic_loci_crosses_two_exons_positive_strand(self):
         transcript = self.create_segment_transcript()
 
-        loci = transcript.segment_to_loci(90, 120)
+        loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 90, 120)
+        )
 
         assert loci == [
             Locus("chr1", 1190, 1199, "+"),
             Locus("chr1", 1300, 1319, "+"),
         ]
 
-    def test_segment_to_loci_crosses_more_than_two_exons(self):
+    def test_to_genomic_loci_crosses_more_than_two_exons(self):
         transcript = self.create_segment_transcript()
 
-        loci = transcript.segment_to_loci(90, 170)
+        loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 90, 170)
+        )
 
         assert loci == [
             Locus("chr1", 1190, 1199, "+"),
@@ -286,10 +292,12 @@ class TestTranscript:
             Locus("chr1", 1500, 1519, "+"),
         ]
 
-    def test_segment_to_loci_negative_strand_uses_transcript_order(self):
+    def test_to_genomic_loci_negative_strand_uses_transcript_order(self):
         transcript = self.create_segment_transcript(strand="-")
 
-        loci = transcript.segment_to_loci(90, 170)
+        loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 90, 170)
+        )
 
         assert loci == [
             Locus("chr1", 1500, 1509, "-"),
@@ -297,10 +305,12 @@ class TestTranscript:
             Locus("chr1", 1180, 1199, "-"),
         ]
 
-    def test_segment_to_loci_entire_spliced_sequence(self):
+    def test_to_genomic_loci_entire_spliced_sequence(self):
         transcript = self.create_segment_transcript()
 
-        loci = transcript.segment_to_loci(0, len(transcript.sequence))
+        loci = transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 0, len(transcript.sequence))
+        )
 
         assert loci == [
             Locus("chr1", 1100, 1199, "+"),
@@ -315,20 +325,29 @@ class TestTranscript:
             ("-", Locus("chr1", 1599, 1599, "-"), Locus("chr1", 1100, 1100, "-")),
         ],
     )
-    def test_segment_to_loci_first_and_last_nucleotide(self, strand, first, last):
+    def test_to_genomic_loci_first_and_last_nucleotide(self, strand, first, last):
         transcript = self.create_segment_transcript(strand=strand)
 
-        assert transcript.segment_to_loci(0, 1) == [first]
-        assert transcript.segment_to_loci(249, 250) == [last]
+        assert transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 0, 1)
+        ) == [first]
+        assert transcript.to_genomic_loci(
+            TranscriptLocus(transcript.id, 249, 250)
+        ) == [last]
 
-    @pytest.mark.parametrize("start,end", [(-1, 1), (10, 10), (0, 251)])
-    def test_segment_to_loci_rejects_invalid_bounds(self, start, end):
+    def test_to_genomic_loci_rejects_end_beyond_sequence(self):
         transcript = self.create_segment_transcript()
 
         with pytest.raises(ValueError, match="out of bounds"):
-            transcript.segment_to_loci(start, end)
+            transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 251))
 
-    def test_segment_to_loci_rejects_transcript_without_exons(self):
+    def test_to_genomic_loci_rejects_mismatched_transcript_id(self):
+        transcript = self.create_segment_transcript()
+
+        with pytest.raises(ValueError, match="must match"):
+            transcript.to_genomic_loci(TranscriptLocus("different", 0, 1))
+
+    def test_to_genomic_loci_rejects_transcript_without_exons(self):
         transcript = Transcript(
             id="ENST00000001",
             chr="chr1",
@@ -339,13 +358,13 @@ class TestTranscript:
         )
 
         with pytest.raises(ValueError, match="at least one exon"):
-            transcript.segment_to_loci(0, 1)
+            transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 1))
 
-    def test_segment_to_loci_rejects_exon_sequence_length_mismatch(self):
+    def test_to_genomic_loci_rejects_exon_sequence_length_mismatch(self):
         transcript = self.create_segment_transcript(sequence_length=249)
 
         with pytest.raises(ValueError, match="Sum of exon lengths"):
-            transcript.segment_to_loci(0, 1)
+            transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 1))
 
     @pytest.mark.parametrize(
         ("exon_chr", "exon_strand", "message"),
@@ -354,7 +373,7 @@ class TestTranscript:
             ("chr1", "-", "strand"),
         ],
     )
-    def test_segment_to_loci_rejects_exon_on_wrong_locus(
+    def test_to_genomic_loci_rejects_exon_on_wrong_locus(
         self,
         exon_chr,
         exon_strand,
@@ -374,9 +393,9 @@ class TestTranscript:
         )
 
         with pytest.raises(ValueError, match=message):
-            transcript.segment_to_loci(0, 1)
+            transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 1))
 
-    def test_segment_to_loci_rejects_overlapping_exons(self):
+    def test_to_genomic_loci_rejects_overlapping_exons(self):
         transcript = Transcript(
             id="ENST00000001",
             chr="chr1",
@@ -390,7 +409,7 @@ class TestTranscript:
         transcript.add_exon(self.create_mock_exon(1200, 1300))
 
         with pytest.raises(ValueError, match="must not overlap"):
-            transcript.segment_to_loci(0, 1)
+            transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 1))
 
     def test_transcript_length_calculation(self):
         """Test that transcript length matches sequence length."""
@@ -440,7 +459,7 @@ class TestTranscript:
         expected_repr = "Transcript(id='ENST00000005', locus=Locus(chr5:12000-15000, strand=-))"
         assert repr(transcript) == expected_repr
 
-    def test_segment_to_loci_single_exon_edge_cases(self):
+    def test_to_genomic_loci_single_exon_edge_cases(self):
         """Test edge cases in coordinate conversion."""
         gene = self.create_mock_gene("chr1", 1000, 2000, "+")
         genome_mock = Mock()
@@ -461,15 +480,15 @@ class TestTranscript:
         transcript.add_exon(exon1)
         
         # Test position 0 (start of transcript)
-        loci = transcript.segment_to_loci(0, 1)
+        loci = transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 1))
         assert loci == [Locus("chr1", 1100, 1100, "+")]
         
         # Test last position (end of transcript)
-        loci = transcript.segment_to_loci(99, 100)
+        loci = transcript.to_genomic_loci(TranscriptLocus(transcript.id, 99, 100))
         assert loci == [Locus("chr1", 1199, 1199, "+")]
         
         # Test range covering entire transcript
-        loci = transcript.segment_to_loci(0, 100)
+        loci = transcript.to_genomic_loci(TranscriptLocus(transcript.id, 0, 100))
         assert loci == [Locus("chr1", 1100, 1199, "+")]
 
     def test_transcript_standalone_creation(self):
@@ -585,7 +604,7 @@ class TestTranscript:
         transcript._exons = [exon1, exon2]
         
         # Test coordinate conversion
-        loci = transcript.segment_to_loci(50, 51)
+        loci = transcript.to_genomic_loci(TranscriptLocus(transcript.id, 50, 51))
         assert loci == [Locus("chr1", 1150, 1150, "+")]
 
     def test_transcript_standalone_equality_and_hashing(self):

@@ -17,6 +17,7 @@ from .genome import Genome
 from .genome_element import GenomeElement
 from .locus import Locus, Strand
 from .transcript import Transcript
+from .transcript_locus import TranscriptLocus
 
 __all__ = [
     "GenomeBuilder",
@@ -28,4 +29,5 @@ __all__ = [
     "Locus",
     "Strand",
     "Transcript",
+    "TranscriptLocus",
 ]
