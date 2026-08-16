@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from GenomeUtils.genome.builder import BuilderStateError, _strip_version
-from GenomeUtils.Genome import Genome, GenomeBuilder
+from GenomeUtils.Genome import Genome, GenomeBuilder, Locus
 
 
 class TestGenomeBuilder:
@@ -483,13 +483,12 @@ class TestGenomeBuilderIntegration:
     @pytest.mark.integration
     def test_full_builder_workflow_minimal(self, temp_dir):
         """Test complete builder workflow with minimal data."""
-        # Create minimal test files
-        fasta_content = """>chr1
-ATCGATCGATCGAAATTTGGGCCCTTTTAAAACCCCGGGGTTTTAAAACCCCGGGG
-"""
-        cdna_content = """>TRANS001
-ATCGATCGATCGAAATTTGGGCCCTTTTAAAACCCCGGGG
-"""
+        chromosome_sequence = (
+            "ATCGATCGATCGAAATTTGGGCCCTTTTAAAACCCCGGGGTTTTAAAACCCCGGGG"
+        )
+        transcript_sequence = chromosome_sequence[14:25] + chromosome_sequence[34:45]
+        fasta_content = f">chr1\n{chromosome_sequence}\n"
+        cdna_content = f">TRANS001\n{transcript_sequence}\n"
         gtf_content = """chr1	test	gene	10	50	.	+	.	gene_id "GENE001"; gene_name "TEST_GENE";
 chr1	test	transcript	15	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001";
 chr1	test	exon	15	25	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id "EXON001";
@@ -504,19 +503,18 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         gtf_file.write_text(gtf_content)
         
         # Build genome
-        builder = GenomeBuilder(
-            id="test_genome",
-            species="Homo sapiens",
-            name="Test Genome",
-            separate_scaffolds=False
+        genome, scaffold_genome = (
+            GenomeBuilder(
+                id="test_genome",
+                species="Homo sapiens",
+                name="Test Genome",
+                separate_scaffolds=False,
+            )
+            .with_dna_fasta(fasta_file)
+            .with_cdna_fasta(cdna_file)
+            .with_gtf_file(gtf_file)
+            .build()
         )
-        
-        genome, scaffold_genome = (builder
-                 .set_chromosome_filter(["chr1"])
-                 .with_dna_fasta(fasta_file)
-                 .with_cdna_fasta(cdna_file)
-                 .with_gtf_file(gtf_file)
-                 .build())
         
         # Verify genome structure
         assert isinstance(genome, Genome)
@@ -532,8 +530,9 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         assert gene.name == "TEST_GENE"
         
         assert len(gene.transcripts) == 1
-        transcript = gene.transcripts[0]
+        transcript = genome.transcript_by_id("TRANS001")
         assert transcript.id == "TRANS001"
+        assert str(transcript.sequence) == transcript_sequence
         
         assert len(transcript.exons) == 2
         assert transcript.exons[0].id == "EXON001"
@@ -548,6 +547,21 @@ chr1	test	exon	35	45	.	+	.	gene_id "GENE001"; transcript_id "TRANS001"; exon_id 
         # Verify exon-gene relationship
         assert exon1.get_gene() == gene
         assert exon2.get_gene() == gene
+
+        assert len(transcript.sequence) == sum(len(exon) for exon in transcript.exons)
+
+        first_exon_loci = transcript.segment_to_loci(2, 7)
+        assert isinstance(first_exon_loci, list)
+        assert all(isinstance(locus, Locus) for locus in first_exon_loci)
+        assert first_exon_loci == [Locus("chr1", 17, 21, "+")]
+
+        junction_loci = transcript.segment_to_loci(8, 15)
+        assert isinstance(junction_loci, list)
+        assert all(isinstance(locus, Locus) for locus in junction_loci)
+        assert junction_loci == [
+            Locus("chr1", 23, 25, "+"),
+            Locus("chr1", 35, 38, "+"),
+        ]
 
     @pytest.mark.integration
     def test_exon_shared_across_transcripts(self, temp_dir):

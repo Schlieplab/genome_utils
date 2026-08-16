@@ -96,39 +96,49 @@ class Transcript(GenomeElement):
         """Get the exon intervals for this transcript."""
         return [(exon.start, exon.end) for exon in self.exons]
     
-    def transcript_to_genomic_pos(
+    def segment_to_loci(
         self,
         start: int,
-        end: int | None = None,
-    ) -> Locus | list[Locus] | None:
-        """
-        Converts a 0-based, half-open transcript coordinate (or range) to a
-        1-based, inclusive genomic coordinate (or list of Locus objects).
+        end: int,
+    ) -> list[Locus]:
+        """Convert a transcript segment to genomic loci.
 
         Args:
-            start: The 0-based start position on the transcript.
-            end: The optional 0-based end position on the transcript. If None, a single
-                 point is converted. If provided, the range is [start, end).
+            start: The 0-based, inclusive segment start on the spliced transcript.
+            end: The 0-based, exclusive segment end on the spliced transcript.
 
         Returns:
-            - A Locus object for a single point or for a range within a single exon.
-            - A list of Locus objects if the range spans multiple exons.
-            - None if a single point maps to no location; an empty list for a range.
+            One 1-based, inclusive locus per contributing exon, in 5'-to-3'
+            transcript order.
         """
-        is_single_point = end is None
-        if is_single_point:
-            end = start + 1
+        if not self.exons:
+            raise ValueError("Transcript must have at least one exon.")
 
-        if not (0 <= start < end <= len(self)):
-            if is_single_point:
-                raise ValueError(f"Transcript position {start} is out of bounds.")
-            else:
-                raise ValueError(f"Transcript positions [{start}, {end}) are out of bounds.")
+        for exon in self.exons:
+            if exon.chr != self.chr:
+                raise ValueError("Exon chromosome must match transcript chromosome.")
+            if exon.strand != self.strand:
+                raise ValueError("Exon strand must match transcript strand.")
 
-        genomic_loci = []
+        exons_by_position = sorted(self.exons, key=lambda exon: exon.start)
+        for previous, current in zip(exons_by_position, exons_by_position[1:]):
+            if current.start <= previous.end:
+                raise ValueError("Transcript exons must not overlap.")
+
+        if sum(len(exon) for exon in self.exons) != len(self.sequence):
+            raise ValueError("Sum of exon lengths must equal transcript sequence length.")
+
+        if not 0 <= start < end <= len(self.sequence):
+            raise ValueError(f"Transcript segment [{start}, {end}) is out of bounds.")
+
+        genomic_loci: list[Locus] = []
         transcript_pos = 0
-        
-        exons_in_order = self.exons
+
+        exons_in_order = sorted(
+            self.exons,
+            key=lambda exon: exon.start,
+            reverse=self.strand == "-",
+        )
 
         for exon in exons_in_order:
             exon_len = len(exon)
@@ -154,7 +164,4 @@ class Transcript(GenomeElement):
             if transcript_pos >= end:
                 break
 
-        if len(genomic_loci) == 1:
-            return genomic_loci[0]
-        
         return genomic_loci
