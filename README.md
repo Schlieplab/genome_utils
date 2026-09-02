@@ -29,15 +29,21 @@ from GenomeUtils.Downloaders import EnsemblGenomeDownloader
 from GenomeUtils.Genome import GenomeBuilder
 
 # Download Ensembl assets
+destinations = {
+    "dna": Path("./data/genome.fa.gz"),
+    "cdna": Path("./data/transcripts.fa.gz"),
+    "annotation": Path("./data/annotation.gtf.gz"),
+    "db": Path("./data/annotation.db"),
+}
 downloader = EnsemblGenomeDownloader(
     assembly_id="GRCh38",
-    ensembl_release=109,
+    ensembl_release=114,
     species="homo_sapiens",
-    genomes_root_dir=Path("./data/genomes"),
+    destinations=destinations,
 )
 
-files = downloader.download()
-print(files)  # { 'dna': Path(...), 'cdna': Path(...), 'annotation': Path(...) }
+files = downloader.download(output_db=True)
+print(files)  # Exact destination Paths under dna, cdna, annotation, and db
 
 
 # Build genome from downloaded files
@@ -62,6 +68,11 @@ print(first_gene.id, first_gene.name)
 # Fast lookups (after build() the genome is indexed)
 print(genome.gene_by_id(first_gene.id))
 ```
+
+The `genomes_root_dir/ensembl/{assembly}/{release}` layout remains available
+when explicit destinations are not needed. In explicit mode, `dna`, `cdna`,
+and `annotation` are required. `db` is required with `output_db=True` and
+rejected with `output_db=False`.
 
 ### 2) Build a genome from existing files
 

@@ -13,12 +13,71 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from GenomeUtils.genome.builder import BuilderStateError, _strip_version
+from GenomeUtils.genome.builder import (
+    BuilderStateError,
+    _strip_version,
+    create_gtf_database,
+)
 from GenomeUtils.Genome import Genome, GenomeBuilder, Locus, TranscriptLocus
 
 
 class TestGenomeBuilder:
     """Test cases for the GenomeBuilder class."""
+
+    def test_create_gtf_database_can_remove_new_extracted_gtf(
+        self,
+        tmp_path,
+        sample_gtf_content,
+    ):
+        compressed_gtf = tmp_path / "annotation.gtf.gz"
+        with gzip.open(compressed_gtf, "wt") as gtf_file:
+            gtf_file.write(sample_gtf_content)
+
+        database, database_path = create_gtf_database(
+            compressed_gtf,
+            keep_extracted_gtf=False,
+        )
+
+        assert database_path.exists()
+        assert database["GENE001"].id == "GENE001"
+        assert not compressed_gtf.with_suffix("").exists()
+
+    def test_create_gtf_database_preserves_preexisting_extracted_gtf(
+        self,
+        tmp_path,
+        sample_gtf_content,
+    ):
+        compressed_gtf = tmp_path / "annotation.gtf.gz"
+        extracted_gtf = compressed_gtf.with_suffix("")
+        with gzip.open(compressed_gtf, "wt") as gtf_file:
+            gtf_file.write(sample_gtf_content)
+        extracted_gtf.write_text(sample_gtf_content)
+
+        create_gtf_database(compressed_gtf, keep_extracted_gtf=False)
+
+        assert extracted_gtf.exists()
+        assert extracted_gtf.read_text() == sample_gtf_content
+
+    def test_create_gtf_database_cleans_new_intermediate_on_failure(
+        self,
+        tmp_path,
+        sample_gtf_content,
+    ):
+        compressed_gtf = tmp_path / "annotation.gtf.gz"
+        with gzip.open(compressed_gtf, "wt") as gtf_file:
+            gtf_file.write(sample_gtf_content)
+
+        with patch(
+            "GenomeUtils.genome.builder.gffutils.create_db",
+            side_effect=RuntimeError("database failed"),
+        ):
+            with pytest.raises(RuntimeError, match="database failed"):
+                create_gtf_database(
+                    compressed_gtf,
+                    keep_extracted_gtf=False,
+                )
+
+        assert not compressed_gtf.with_suffix("").exists()
 
     def test_genome_builder_initialization(self):
         """Test basic GenomeBuilder initialization."""

@@ -8,6 +8,7 @@ Description: Unit tests for the EnsemblGenomeDownloader class.
 License: LGPL-3.0-or-later
 """
 
+import gzip
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -50,6 +51,18 @@ class TestEnsemblGenomeDownloader:
         assert downloader.genomes_root_dir == custom_root
         expected_dir = custom_root / 'ensembl' / 'GRCm39' / '105'
         assert downloader.download_dir == expected_dir
+
+    def test_legacy_construction_creates_nested_directory(self, tmp_path):
+        root = tmp_path / "genomes"
+
+        EnsemblGenomeDownloader(
+            assembly_id="GRCh38",
+            ensembl_release=114,
+            species="homo_sapiens",
+            genomes_root_dir=root,
+        )
+
+        assert (root / "ensembl" / "GRCh38" / "114").is_dir()
 
     def test_ensembl_downloader_creation_string_path(self):
         """Test EnsemblGenomeDownloader creation with string path."""
@@ -335,3 +348,132 @@ class TestEnsemblGenomeDownloader:
 
         assert "gtf/homo_sapiens" in gtf_url
         assert "Homo_sapiens.GRCh38.115.gtf.gz" in gtf_url
+
+    def test_explicit_destinations_write_exact_paths_without_legacy_layout(
+        self,
+        tmp_path,
+        sample_gtf_content,
+    ):
+        """Explicit mode writes only its declared artifacts."""
+        destinations = {
+            "dna": str(tmp_path / "reference" / "genome.fa.gz"),
+            "cdna": tmp_path / "transcripts" / "all.fa.gz",
+            "annotation": tmp_path / "annotation" / "genes.gtf.gz",
+            "db": tmp_path / "database" / "features.sqlite",
+        }
+        legacy_root = tmp_path / "legacy-root"
+        downloader = EnsemblGenomeDownloader(
+            assembly_id="GRCh38",
+            ensembl_release=114,
+            species="homo_sapiens",
+            genomes_root_dir=legacy_root,
+            destinations=destinations,
+        )
+        assert not legacy_root.exists()
+
+        def write_download(_url, destination, *, force=False):
+            path = Path(destination)
+            if path == Path(destinations["annotation"]):
+                with gzip.open(path, "wt") as gtf_file:
+                    gtf_file.write(sample_gtf_content)
+            else:
+                path.write_bytes(b"fasta")
+            return path
+
+        with patch.object(
+            downloader,
+            "download_file_to",
+            side_effect=write_download,
+        ) as download_file_to:
+            paths = downloader.download(force=True, output_db=True)
+
+        expected = {key: Path(path) for key, path in destinations.items()}
+        assert paths == expected
+        assert all(path.exists() for path in expected.values())
+        assert download_file_to.call_count == 3
+        assert not legacy_root.exists()
+        assert not expected["annotation"].with_suffix("").exists()
+
+    @pytest.mark.parametrize(
+        ("destinations", "message"),
+        [
+            (
+                {"dna": "dna", "cdna": "cdna"},
+                "Missing required destinations: annotation",
+            ),
+            (
+                {
+                    "dna": "dna",
+                    "cdna": "cdna",
+                    "annotation": "annotation",
+                    "extra": "extra",
+                },
+                "Unexpected destinations: extra",
+            ),
+            (
+                {
+                    "dna": "same",
+                    "cdna": "same",
+                    "annotation": "annotation",
+                },
+                "unique after resolution",
+            ),
+        ],
+    )
+    def test_invalid_explicit_destinations_fail_during_construction(
+        self,
+        tmp_path,
+        destinations,
+        message,
+    ):
+        """Invalid mappings fail before the constructor creates directories."""
+        root = tmp_path / "untouched"
+        destination_paths = {
+            key: root / "outputs" / value
+            for key, value in destinations.items()
+        }
+        with pytest.raises(ValueError, match=message):
+            EnsemblGenomeDownloader(
+                assembly_id="GRCh38",
+                ensembl_release=114,
+                species="homo_sapiens",
+                genomes_root_dir=root,
+                destinations=destination_paths,
+            )
+        assert not root.exists()
+
+    @pytest.mark.parametrize(
+        ("include_db", "output_db", "message"),
+        [
+            (False, True, "required when output_db=True"),
+            (True, False, "requires output_db=True"),
+        ],
+    )
+    def test_db_destination_contract_fails_before_downloading(
+        self,
+        tmp_path,
+        include_db,
+        output_db,
+        message,
+    ):
+        output_root = tmp_path / "untouched"
+        destinations = {
+            "dna": output_root / "dna.fa.gz",
+            "cdna": output_root / "cdna.fa.gz",
+            "annotation": output_root / "annotation.gtf.gz",
+        }
+        if include_db:
+            destinations["db"] = output_root / "annotation.db"
+        downloader = EnsemblGenomeDownloader(
+            assembly_id="GRCh38",
+            ensembl_release=114,
+            species="homo_sapiens",
+            destinations=destinations,
+        )
+
+        with patch.object(downloader, "download_file_to") as download_file_to:
+            with pytest.raises(ValueError, match=message):
+                downloader.download(output_db=output_db)
+
+        download_file_to.assert_not_called()
+        assert not output_root.exists()

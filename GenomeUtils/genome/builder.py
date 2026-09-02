@@ -3,7 +3,7 @@
 Filename: GenomeUtils/genome/builder.py
 Author: Arash Ayat
 Copyright: 2026, Alexander Schliep
-Version: 0.1.3
+Version: 0.2.0
 Description: This file contains the GenomeBuilder class for constructing genome objects.
 License: LGPL-3.0-or-later
 """
@@ -38,8 +38,14 @@ def create_gtf_database(
     db_path: Path | None = None,
     *,
     force: bool = False,
+    keep_extracted_gtf: bool = True,
 ) -> tuple[gffutils.FeatureDB, Path]:
-    """Create or load a gffutils database and return it with its path."""
+    """Create or load a gffutils database and return it with its path.
+
+    When a gzipped GTF must be extracted, ``keep_extracted_gtf=False`` removes
+    only an intermediate created by this invocation. A pre-existing extracted
+    GTF is always preserved.
+    """
     gtf_path = Path(gtf_path)
     gtf_file_to_use = (
         gtf_path.with_suffix("")
@@ -66,24 +72,30 @@ def create_gtf_database(
             )
             resolved_db_path.unlink()
 
-    if str(gtf_path).endswith(".gz") and not gtf_file_to_use.exists():
-        logger.info("Extracting gzipped GTF file to: %s", gtf_file_to_use)
-        with gzip.open(gtf_path, "rt") as gz_file:
-            with open(gtf_file_to_use, "w") as out_file:
-                shutil.copyfileobj(gz_file, out_file)
+    created_extracted_gtf = False
+    try:
+        if str(gtf_path).endswith(".gz") and not gtf_file_to_use.exists():
+            logger.info("Extracting gzipped GTF file to: %s", gtf_file_to_use)
+            with gzip.open(gtf_path, "rt") as gz_file:
+                with open(gtf_file_to_use, "x") as out_file:
+                    created_extracted_gtf = True
+                    shutil.copyfileobj(gz_file, out_file)
 
-    resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info("Database not found. Creating new database at: %s", resolved_db_path)
-    db = gffutils.create_db(
-        str(gtf_file_to_use),
-        dbfn=str(resolved_db_path),
-        keep_order=False,
-        merge_strategy="error",
-        id_spec={"gene": "gene_id", "transcript": "transcript_id"},
-        disable_infer_genes=True,
-        disable_infer_transcripts=True,
-    )
-    return db, resolved_db_path.resolve()
+        resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info("Database not found. Creating new database at: %s", resolved_db_path)
+        db = gffutils.create_db(
+            str(gtf_file_to_use),
+            dbfn=str(resolved_db_path),
+            keep_order=False,
+            merge_strategy="error",
+            id_spec={"gene": "gene_id", "transcript": "transcript_id"},
+            disable_infer_genes=True,
+            disable_infer_transcripts=True,
+        )
+        return db, resolved_db_path.resolve()
+    finally:
+        if created_extracted_gtf and not keep_extracted_gtf:
+            gtf_file_to_use.unlink(missing_ok=True)
 
 
 def _get_default_chromosomes_for_species(species: str) -> set[str]:
