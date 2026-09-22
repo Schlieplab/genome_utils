@@ -1,18 +1,20 @@
-name: "Sphinx: Render docs"
+name: "Sphinx: Build docs"
+
+# Documentation is hosted on Read the Docs, which builds and deploys it from
+# .readthedocs.yaml. This workflow only verifies that the docs still build.
 
 on:
   push:
     branches:
       - master
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: docs-pages
+  group: docs-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,22 +37,4 @@ jobs:
           pip install -r docs/requirements.txt
 
       - name: Build Sphinx HTML
-        run: sphinx-build -b html docs docs/_build/html
-
-      - name: Upload documentation artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/_build/html
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        
+        run: sphinx-build -W -b html docs docs/_build/html

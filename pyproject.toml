@@ -28,5 +28,11 @@ dependencies = [
     "tqdm>=4.67,<5",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Schlieplab/genome_utils"
+Documentation = "https://genomeutils.readthedocs.io/en/latest/"
+Source = "https://github.com/Schlieplab/genome_utils"
+Issues = "https://github.com/Schlieplab/genome_utils/issues"
+
 [tool.setuptools.packages.find]
 include = ["GenomeUtils*"]
