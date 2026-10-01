@@ -3,7 +3,6 @@
 Filename: tests/integration/test_integration.py
 Author: Arash Ayat
 Copyright: 2026, Alexander Schliep
-Version: 0.1.3
 Description: Integration tests for the genome_utils package.
 License: LGPL-3.0-or-later
 """

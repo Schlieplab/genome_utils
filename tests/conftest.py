@@ -3,7 +3,6 @@
 Filename: tests/conftest.py
 Author: Arash Ayat
 Copyright: 2026, Alexander Schliep
-Version: 0.1.3
 Description: Configuration and fixtures for genome_utils tests.
 License: LGPL-3.0-or-later
 """
