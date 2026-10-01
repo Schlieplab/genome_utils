@@ -189,7 +189,7 @@ custom_genome, _ = GenomeBuilder(
 
 ## Technical Documentation
 
-Find the technical documentation [here](https://genomeutils.readthedocs.io/en/latest/). APIs may evolve.
+Find the technical documentation [here](https://genome-utils.readthedocs.io/en/latest/). APIs may evolve.
 
 ## Contributing
 
