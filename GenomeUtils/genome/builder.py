@@ -3,7 +3,6 @@
 Filename: GenomeUtils/genome/builder.py
 Author: Arash Ayat
 Copyright: 2026, Alexander Schliep
-Version: 0.2.0
 Description: This file contains the GenomeBuilder class for constructing genome objects.
 License: LGPL-3.0-or-later
 """
