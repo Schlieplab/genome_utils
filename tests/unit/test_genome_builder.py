@@ -8,6 +8,7 @@ License: LGPL-3.0-or-later
 """
 
 import gzip
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -27,19 +28,24 @@ class TestGenomeBuilder:
         self,
         tmp_path,
         sample_gtf_content,
+        caplog,
     ):
         compressed_gtf = tmp_path / "annotation.gtf.gz"
         with gzip.open(compressed_gtf, "wt") as gtf_file:
             gtf_file.write(sample_gtf_content)
 
-        database, database_path = create_gtf_database(
-            compressed_gtf,
-            keep_extracted_gtf=False,
-        )
+        with caplog.at_level(logging.INFO):
+            database, database_path = create_gtf_database(
+                compressed_gtf,
+                keep_extracted_gtf=False,
+            )
 
         assert database_path.exists()
         assert database["GENE001"].id == "GENE001"
         assert not compressed_gtf.with_suffix("").exists()
+        assert "Extracting gzipped GTF file to: annotation.gtf" in caplog.messages
+        assert "Database not found. Creating new database at: annotation.gtf.db" in caplog.messages
+        assert str(tmp_path) not in caplog.text
 
     def test_create_gtf_database_preserves_preexisting_extracted_gtf(
         self,
@@ -167,19 +173,23 @@ class TestGenomeBuilder:
         assert builder._genome.chromosome_by_id("chr1") is not None
         assert builder._genome.chromosome_by_id("chr2") is not None
 
-    def test_with_dna_fasta_gzipped(self, temp_dir, sample_fasta_content):
+    def test_with_dna_fasta_gzipped(self, temp_dir, sample_fasta_content, caplog):
         """Test DNA FASTA loading from gzipped file."""
         fasta_file = temp_dir / "test.fa.gz"
         with gzip.open(fasta_file, 'wt') as f:
             f.write(sample_fasta_content)
         
         builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
-        builder.with_dna_fasta(fasta_file)
+        with caplog.at_level(logging.INFO):
+            builder.with_dna_fasta(fasta_file)
         
         assert len(builder._genome.chromosomes) == 2
         # Check that extracted file was created
         extracted_file = temp_dir / "test.fa"
         assert extracted_file.exists()
+        assert "Extracting gzipped DNA FASTA to: test.fa" in caplog.messages
+        assert "Loading DNA sequences from test.fa" in caplog.messages
+        assert str(temp_dir) not in caplog.text
 
     def test_with_dna_fasta_chromosome_filter(self, temp_dir, sample_fasta_content):
         """Test DNA FASTA loading with chromosome filter."""
@@ -381,6 +391,7 @@ TTTTAAAACCCCGGGGTTTTAAAA
         temp_dir,
         sample_fasta_content,
         sample_cdna_content,
+        caplog,
     ):
         """An explicit database is loaded without reading or recreating the GTF."""
         fasta_file = temp_dir / "test.fa"
@@ -399,13 +410,19 @@ TTTTAAAACCCCGGGGTTTTAAAA
         mock_gffutils.FeatureDB.return_value = mock_db
 
         builder = GenomeBuilder("test", "Homo sapiens", "name", separate_scaffolds=False)
-        builder.with_dna_fasta(fasta_file)
-        builder.with_cdna_fasta(cdna_file)
-        builder.with_gtf_file(temp_dir / "missing.gtf.gz", db_path=db_path)
+        with caplog.at_level(logging.INFO):
+            builder.with_dna_fasta(fasta_file)
+            builder.with_cdna_fasta(cdna_file)
+            builder.with_gtf_file(temp_dir / "missing.gtf.gz", db_path=db_path)
 
         mock_gffutils.FeatureDB.assert_called_once_with(str(db_path))
         mock_gffutils.create_db.assert_not_called()
         assert builder._gtf_db_path == db_path.resolve()
+        assert "Loading DNA sequences from test.fa" in caplog.messages
+        assert "Loading cDNA sequences from cdna.fa" in caplog.messages
+        assert "Processing annotations from missing.gtf.gz" in caplog.messages
+        assert "Loading existing gffutils database: provided.db" in caplog.messages
+        assert str(temp_dir) not in caplog.text
 
     @patch('GenomeUtils.genome.builder.gffutils')
     def test_build_success_single_genome(self, mock_gffutils, temp_dir, sample_fasta_content, sample_cdna_content, sample_gtf_content):

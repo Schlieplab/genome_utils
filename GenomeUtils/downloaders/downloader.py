@@ -87,11 +87,11 @@ class Downloader(ABC):
         if not force and existed_before_download:
             self.logger.info(
                 "File '%s' already exists. Skipping download.",
-                destination_path,
+                destination_path.name,
             )
             return destination_path
 
-        self.logger.info("Downloading to '%s'...", destination_path)
+        self.logger.info("Downloading to '%s'...", destination_path.name)
         temporary_file = tempfile.NamedTemporaryFile(
             mode="wb",
             dir=destination_path.parent,

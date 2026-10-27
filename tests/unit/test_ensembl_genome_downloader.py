@@ -105,6 +105,7 @@ class TestEnsemblGenomeDownloader:
         )
         urls = downloader.get_urls()
 
+        assert set(urls) == {"dna", "cdna", "annotation"}
         assert "release-110" in urls['dna']
         assert "homo_sapiens" in urls['dna']
         assert "Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz" in urls['dna']
@@ -122,14 +123,27 @@ class TestEnsemblGenomeDownloader:
             ensembl_release=105,
             species="mus_musculus"
         )
-        urls = downloader.get_urls()
+        urls = downloader.get_urls(outputs=["dna", "cdna", "ncrna", "annotation"])
 
         assert "Mus_musculus.GRCm39" in urls['dna']
         assert "Mus_musculus.GRCm39" in urls['cdna']
+        assert urls["ncrna"] == (
+            "https://ftp.ensembl.org/pub/release-105/fasta/mus_musculus/ncrna/"
+            "Mus_musculus.GRCm39.ncrna.fa.gz"
+        )
         assert "Mus_musculus.GRCm39.105.gtf.gz" in urls['annotation']
 
+    @pytest.mark.parametrize(
+        "outputs",
+        [
+            ["dna", "cdna", "annotation"],
+            ["dna", "cdna", "annotation", "ncrna"],
+            ["ncrna"],
+            ["annotation", "dna"],
+        ],
+    )
     @patch.object(EnsemblGenomeDownloader, 'download_file')
-    def test_download_success(self, mock_download_file):
+    def test_download_success(self, mock_download_file, outputs):
         """Test successful download of genome files."""
         downloader = EnsemblGenomeDownloader(
             assembly_id="GRCh38",
@@ -140,6 +154,7 @@ class TestEnsemblGenomeDownloader:
         mock_paths = {
             'dna': Path('/path/to/dna.fa.gz'),
             'cdna': Path('/path/to/cdna.fa.gz'),
+            'ncrna': Path('/path/to/ncrna.fa.gz'),
             'annotation': Path('/path/to/annotation.gtf.gz')
         }
 
@@ -148,18 +163,19 @@ class TestEnsemblGenomeDownloader:
                 return mock_paths['annotation']
             elif 'cdna' in url:
                 return mock_paths['cdna']
+            elif 'ncrna' in url:
+                return mock_paths['ncrna']
             elif 'dna' in url:
                 return mock_paths['dna']
 
         mock_download_file.side_effect = mock_download_side_effect
 
-        result = downloader.download()
+        result = downloader.download(outputs=outputs)
 
-        assert mock_download_file.call_count == 3
+        assert mock_download_file.call_count == len(outputs)
         assert all(call.kwargs == {'force': False} for call in mock_download_file.call_args_list)
-        assert result['dna'] == mock_paths['dna']
-        assert result['cdna'] == mock_paths['cdna']
-        assert result['annotation'] == mock_paths['annotation']
+        assert result == {key: mock_paths[key] for key in outputs}
+        assert list(result) == outputs
 
     @patch('GenomeUtils.downloaders.genome_downloader.create_gtf_database')
     @patch.object(EnsemblGenomeDownloader, 'download_file')
@@ -203,6 +219,7 @@ class TestEnsemblGenomeDownloader:
 
         assert 'dna' in result
         assert 'cdna' in result
+        assert 'ncrna' not in result
         assert 'annotation' in result
         assert mock_download_file.call_count == 3
 
@@ -336,7 +353,11 @@ class TestEnsemblGenomeDownloader:
             ensembl_release=115,
             species="homo_sapiens"
         )
-        dna_url, cdna_url, gtf_url = downloader._build_urls()
+        urls = downloader.get_urls(outputs=["dna", "cdna", "ncrna", "annotation"])
+        dna_url = urls["dna"]
+        cdna_url = urls["cdna"]
+        ncrna_url = urls["ncrna"]
+        gtf_url = urls["annotation"]
 
         assert "release-115" in dna_url
         assert "fasta/homo_sapiens/dna" in dna_url
@@ -345,13 +366,79 @@ class TestEnsemblGenomeDownloader:
         assert "fasta/homo_sapiens/cdna" in cdna_url
         assert "Homo_sapiens.GRCh38.cdna.all.fa.gz" in cdna_url
 
+        assert ncrna_url == (
+            "https://ftp.ensembl.org/pub/release-115/fasta/homo_sapiens/ncrna/"
+            "Homo_sapiens.GRCh38.ncrna.fa.gz"
+        )
+
         assert "gtf/homo_sapiens" in gtf_url
         assert "Homo_sapiens.GRCh38.115.gtf.gz" in gtf_url
 
+    @pytest.mark.parametrize("outputs", [[], "dna", ["db"], ["unknown"], ["dna", "dna"]])
+    def test_invalid_outputs_fail_before_downloading(self, tmp_path, outputs):
+        downloader = EnsemblGenomeDownloader(
+            "GRCh38", 110, "homo_sapiens", genomes_root_dir=tmp_path,
+        )
+
+        with patch.object(downloader, "download_file") as download_file:
+            with pytest.raises(ValueError):
+                downloader.download(outputs=outputs)
+
+        download_file.assert_not_called()
+
+    def test_database_requires_annotation_output(self, tmp_path):
+        downloader = EnsemblGenomeDownloader(
+            "GRCh38", 110, "homo_sapiens", genomes_root_dir=tmp_path,
+        )
+
+        with patch.object(downloader, "download_file") as download_file:
+            with pytest.raises(ValueError, match="'annotation' output is required"):
+                downloader.download(outputs=["ncrna"], output_db=True)
+
+        download_file.assert_not_called()
+
+    def test_selected_output_requires_explicit_destination(self, tmp_path):
+        output_root = tmp_path / "untouched"
+        downloader = EnsemblGenomeDownloader(
+            "GRCh38", 110, "homo_sapiens",
+            destinations={"dna": output_root / "dna.fa.gz"},
+        )
+
+        with patch.object(downloader, "download_file_to") as download_file_to:
+            with pytest.raises(ValueError, match="Missing required destinations: ncrna"):
+                downloader.download(outputs=["ncrna"])
+
+        download_file_to.assert_not_called()
+        assert not output_root.exists()
+
+    @pytest.mark.parametrize("outputs", [None, ["ncrna"]])
+    def test_explicit_destinations_download_only_selected_outputs(self, tmp_path, outputs):
+        destinations = {
+            key: tmp_path / key / "file.gz"
+            for key in ("dna", "cdna", "annotation", "ncrna")
+        }
+        downloader = EnsemblGenomeDownloader(
+            "GRCh38", 110, "homo_sapiens", destinations=destinations,
+        )
+        selected = ["dna", "cdna", "annotation"] if outputs is None else outputs
+        expected = {key: destinations[key] for key in selected}
+
+        with patch.object(
+            downloader, "download_file_to", side_effect=lambda url, path, **kwargs: path,
+        ) as download_file_to:
+            result = downloader.download() if outputs is None else downloader.download(outputs=outputs)
+
+        assert result == expected
+        assert download_file_to.call_count == len(selected)
+        for key, path in destinations.items():
+            assert path.parent.exists() == (key in selected)
+
+    @pytest.mark.parametrize("include_ncrna", [False, True])
     def test_explicit_destinations_write_exact_paths_without_legacy_layout(
         self,
         tmp_path,
         sample_gtf_content,
+        include_ncrna,
     ):
         """Explicit mode writes only its declared artifacts."""
         destinations = {
@@ -360,6 +447,8 @@ class TestEnsemblGenomeDownloader:
             "annotation": tmp_path / "annotation" / "genes.gtf.gz",
             "db": tmp_path / "database" / "features.sqlite",
         }
+        if include_ncrna:
+            destinations["ncrna"] = tmp_path / "transcripts" / "ncrna.fa.gz"
         legacy_root = tmp_path / "legacy-root"
         downloader = EnsemblGenomeDownloader(
             assembly_id="GRCh38",
@@ -384,22 +473,21 @@ class TestEnsemblGenomeDownloader:
             "download_file_to",
             side_effect=write_download,
         ) as download_file_to:
-            paths = downloader.download(force=True, output_db=True)
+            outputs = ["dna", "cdna", "annotation"]
+            if include_ncrna:
+                outputs.append("ncrna")
+            paths = downloader.download(force=True, output_db=True, outputs=outputs)
 
         expected = {key: Path(path) for key, path in destinations.items()}
         assert paths == expected
         assert all(path.exists() for path in expected.values())
-        assert download_file_to.call_count == 3
+        assert download_file_to.call_count == 3 + include_ncrna
         assert not legacy_root.exists()
         assert not expected["annotation"].with_suffix("").exists()
 
     @pytest.mark.parametrize(
         ("destinations", "message"),
         [
-            (
-                {"dna": "dna", "cdna": "cdna"},
-                "Missing required destinations: annotation",
-            ),
             (
                 {
                     "dna": "dna",

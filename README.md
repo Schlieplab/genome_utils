@@ -70,9 +70,22 @@ print(genome.gene_by_id(first_gene.id))
 ```
 
 The `genomes_root_dir/ensembl/{assembly}/{release}` layout remains available
-when explicit destinations are not needed. In explicit mode, `dna`, `cdna`,
-and `annotation` are required. `db` is required with `output_db=True` and
-rejected with `output_db=False`.
+when explicit destinations are not needed. By default, `download()` and
+`get_urls()` select `dna`, `cdna`, and `annotation`. Choose files through the
+public `outputs` parameter, for example:
+
+```python
+downloader = EnsemblGenomeDownloader("GRCh38", 114, "homo_sapiens")
+files = downloader.download(outputs=["dna", "cdna", "annotation", "ncrna"])
+# Or download just the ncRNA FASTA:
+files = downloader.download(outputs=["ncrna"])
+```
+
+In explicit mode, provide a destination for each selected output, including
+`ncrna` when requested. Only selected outputs are downloaded. The annotation
+database stays separate: use `output_db=True` and include `annotation` in
+`outputs`. An explicit `db` destination is required with `output_db=True`
+and rejected with `output_db=False`.
 
 ### 2) Build a genome from existing files
 

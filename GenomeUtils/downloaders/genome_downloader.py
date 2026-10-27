@@ -11,7 +11,7 @@ License: LGPL-3.0-or-later
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 
 from ..genome.builder import create_gtf_database
 from .downloader import Downloader
@@ -30,17 +30,18 @@ class EnsemblGenomeDownloader(Downloader):
 
     FTP_BASE = "https://ftp.ensembl.org/pub"
 
-    def _build_urls(self) -> tuple[str, str, str]:
+    def _build_urls(self) -> tuple[str, str, str, str]:
         """
-        Build Ensembl FTP URLs for DNA, cDNA, and Annotation files.
+        Build Ensembl FTP URLs for DNA, cDNA, ncRNA, and annotation files.
 
         Uses the standard Ensembl FTP layout:
         - release-N/fasta/{species}/dna/{Species}.{Assembly}.dna.primary_assembly.fa.gz
         - release-N/fasta/{species}/cdna/{Species}.{Assembly}.cdna.all.fa.gz
+        - release-N/fasta/{species}/ncrna/{Species}.{Assembly}.ncrna.fa.gz
         - release-N/gtf/{species}/{Species}.{Assembly}.{release}.gtf.gz
 
         Returns:
-            Tuple of (dna_url, cdna_url, gtf_url).
+            Tuple of (dna_url, cdna_url, ncrna_url, gtf_url).
         """
         parts = self.species.split("_")
         species_cap = parts[0].capitalize() + "_" + "_".join(p.lower() for p in parts[1:]) if len(parts) > 1 else parts[0].capitalize()
@@ -48,13 +49,15 @@ class EnsemblGenomeDownloader(Downloader):
 
         dna_filename = f"{species_cap}.{self.assembly_id}.dna.primary_assembly.fa.gz"
         cdna_filename = f"{species_cap}.{self.assembly_id}.cdna.all.fa.gz"
+        ncrna_filename = f"{species_cap}.{self.assembly_id}.ncrna.fa.gz"
         gtf_filename = f"{species_cap}.{self.assembly_id}.{self.ensembl_release}.gtf.gz"
 
         dna_url = f"{self.FTP_BASE}/{release_path}/fasta/{self.species}/dna/{dna_filename}"
         cdna_url = f"{self.FTP_BASE}/{release_path}/fasta/{self.species}/cdna/{cdna_filename}"
+        ncrna_url = f"{self.FTP_BASE}/{release_path}/fasta/{self.species}/ncrna/{ncrna_filename}"
         gtf_url = f"{self.FTP_BASE}/{release_path}/gtf/{self.species}/{gtf_filename}"
 
-        return dna_url, cdna_url, gtf_url
+        return dna_url, cdna_url, ncrna_url, gtf_url
 
     def __init__(
         self,
@@ -73,9 +76,10 @@ class EnsemblGenomeDownloader(Downloader):
             species: The scientific name for the species (e.g., 'homo_sapiens').
             genomes_root_dir: The parent directory to store all downloaded genomes.
                 Defaults to './data/genomes'.
-            destinations: Exact paths for the downloaded artifacts. ``dna``,
-                ``cdna``, and ``annotation`` are required. ``db`` is required
-                only when :meth:`download` is called with ``output_db=True``.
+            destinations: Exact paths for the downloaded artifacts. Each output
+                selected in :meth:`download` must have a destination.
+                ``db`` is required only when :meth:`download` is called with
+                ``output_db=True``.
         """
         self.ensembl_release = ensembl_release
         self.assembly_id = assembly_id
@@ -101,15 +105,9 @@ class EnsemblGenomeDownloader(Downloader):
         if destinations is None:
             return None
 
-        required = {"dna", "cdna", "annotation"}
-        allowed = required | {"db"}
+        allowed = {"dna", "cdna", "ncrna", "annotation", "db"}
         provided = set(destinations)
-        missing = required - provided
         unexpected = provided - allowed
-        if missing:
-            raise ValueError(
-                "Missing required destinations: " + ", ".join(sorted(missing))
-            )
         if unexpected:
             raise ValueError(
                 "Unexpected destinations: " + ", ".join(sorted(unexpected))
@@ -130,33 +128,55 @@ class EnsemblGenomeDownloader(Downloader):
             f"genomes_root_dir={self.genomes_root_dir})"
         )
 
-    def get_urls(self) -> dict[str, str]:
+    def get_urls(
+        self,
+        outputs: Sequence[str] = ("dna", "cdna", "annotation"),
+    ) -> dict[str, str]:
         """
-        Build the Ensembl FTP URLs for DNA, cDNA, and Annotation files.
+        Build the Ensembl FTP URLs for the selected outputs.
+
+        Args:
+            outputs: File types to include, chosen from ``dna``, ``cdna``,
+                ``ncrna``, and ``annotation``. Defaults to the original three
+                outputs: DNA, cDNA, and annotation. Database creation is
+                controlled separately by :meth:`download`'s ``output_db``.
 
         Returns:
-            A dictionary with keys 'dna', 'cdna', 'annotation' mapping to URLs.
+            A dictionary mapping the selected file types to URLs, in order.
         """
-        dna_url, cdna_url, gtf_url = self._build_urls()
-        return {
+        if isinstance(outputs, str):
+            raise ValueError("outputs must be a sequence of file types, not a string")
+        outputs = tuple(outputs)
+        if not outputs:
+            raise ValueError("outputs must contain at least one file type")
+        unexpected = set(outputs) - {"dna", "cdna", "ncrna", "annotation"}
+        if unexpected:
+            raise ValueError("Unexpected outputs: " + ", ".join(sorted(unexpected)))
+        if len(outputs) != len(set(outputs)):
+            raise ValueError("outputs must not contain duplicate file types")
+
+        dna_url, cdna_url, ncrna_url, gtf_url = self._build_urls()
+        urls = {
             "dna": dna_url,
             "cdna": cdna_url,
+            "ncrna": ncrna_url,
             "annotation": gtf_url,
         }
+        return {key: urls[key] for key in outputs}
 
     def download(
         self,
         force: bool = False,
         output_db: bool = False,
+        outputs: Sequence[str] = ("dna", "cdna", "annotation"),
     ) -> dict[str, Path]:
         """
-        Download DNA, cDNA, and Annotation files from Ensembl FTP.
+        Download selected Ensembl files; default to DNA, cDNA, and annotation.
 
         Returns:
             A dictionary mapping a file type to the local Path.
-            Keys are `dna`, `cdna`, and `annotation`. When ``output_db`` is
-            true, the returned mapping also contains the annotation database
-            path under the `db` key.
+            Keys match ``outputs``. When ``output_db`` is true, the mapping also
+            contains the annotation database path under the `db` key.
 
         Args:
             force: If True, redownload the files even if they already exist. Defaults to False.
@@ -165,18 +185,30 @@ class EnsemblGenomeDownloader(Downloader):
 
                 In explicit-destination mode, a ``db`` destination must be
                 present when this is true and must be absent when this is false.
+            outputs: File types to download, chosen from ``dna``, ``cdna``,
+                ``ncrna``, and ``annotation``. Defaults to DNA, cDNA, and annotation.
+                Explicit destinations must include each selected output.
+                ``annotation`` must be selected when ``output_db=True``.
         """
+        urls = self.get_urls(outputs=outputs)
+        if output_db and "annotation" not in urls:
+            raise ValueError("The 'annotation' output is required when output_db=True")
+
         if self.destinations is not None:
+            missing = set(urls) - set(self.destinations)
+            if missing:
+                raise ValueError(
+                    "Missing required destinations: " + ", ".join(sorted(missing))
+                )
             if output_db and "db" not in self.destinations:
                 raise ValueError("The 'db' destination is required when output_db=True")
             if not output_db and "db" in self.destinations:
                 raise ValueError("The 'db' destination requires output_db=True")
 
-        urls = self.get_urls()
-
         if self.destinations is not None:
-            for destination in self.destinations.values():
-                destination.parent.mkdir(parents=True, exist_ok=True)
+            destination_keys = list(urls) + (["db"] if output_db else [])
+            for key in destination_keys:
+                self.destinations[key].parent.mkdir(parents=True, exist_ok=True)
 
             paths = {
                 key: self.download_file_to(
@@ -184,7 +216,7 @@ class EnsemblGenomeDownloader(Downloader):
                     self.destinations[key],
                     force=force,
                 )
-                for key in ("dna", "cdna", "annotation")
+                for key in urls
             }
             if output_db:
                 db_destination = self.destinations["db"]

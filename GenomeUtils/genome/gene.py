@@ -19,6 +19,7 @@ from .locus import Locus, Strand
 
 if TYPE_CHECKING:
     from .chromosome import Chromosome
+    from .exon import Exon
     from .transcript import Transcript
     from .genome import Genome
 
@@ -71,6 +72,18 @@ class Gene(GenomeElement):
     @property
     def transcripts(self) -> list[Transcript]:
         return cast("list[Transcript]", self._children)
+
+    @property
+    def exons(self) -> list[Exon]:
+        """Return unique exons from this gene's transcripts in first-seen order."""
+        exons: list[Exon] = []
+        seen: set[Exon] = set()
+        for transcript in self.transcripts:
+            for exon in transcript.exons:
+                if exon not in seen:
+                    seen.add(exon)
+                    exons.append(exon)
+        return exons
 
     def add_transcript(self, transcript: "Transcript"):
         """Add a transcript to the gene."""

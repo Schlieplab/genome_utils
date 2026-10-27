@@ -15,7 +15,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Dict, Literal, Optional, overload
+from typing import Any, Dict, Literal, Optional, overload
 
 import gffutils
 from Bio import SeqIO
@@ -62,7 +62,7 @@ def create_gtf_database(
         resolved_db_path.unlink()
 
     if resolved_db_path.exists():
-        logger.info("Loading existing gffutils database: %s", resolved_db_path)
+        logger.info("Loading existing gffutils database: %s", resolved_db_path.name)
         try:
             return gffutils.FeatureDB(str(resolved_db_path)), resolved_db_path.resolve()
         except Exception as exc:
@@ -75,14 +75,14 @@ def create_gtf_database(
     created_extracted_gtf = False
     try:
         if str(gtf_path).endswith(".gz") and not gtf_file_to_use.exists():
-            logger.info("Extracting gzipped GTF file to: %s", gtf_file_to_use)
+            logger.info("Extracting gzipped GTF file to: %s", gtf_file_to_use.name)
             with gzip.open(gtf_path, "rt") as gz_file:
                 with open(gtf_file_to_use, "x") as out_file:
                     created_extracted_gtf = True
                     shutil.copyfileobj(gz_file, out_file)
 
         resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.info("Database not found. Creating new database at: %s", resolved_db_path)
+        logger.info("Database not found. Creating new database at: %s", resolved_db_path.name)
         db = gffutils.create_db(
             str(gtf_file_to_use),
             dbfn=str(resolved_db_path),
@@ -233,13 +233,13 @@ class GenomeBuilder:
             if extracted_path.exists():
                 dna_file_to_use = extracted_path
             else:
-                self.logger.info(f"Extracting gzipped DNA FASTA to: {extracted_path}")
+                self.logger.info(f"Extracting gzipped DNA FASTA to: {extracted_path.name}")
                 with gzip.open(dna_fasta_path, 'rt') as gz_in:
                     with open(extracted_path, 'w') as f_out:
                         shutil.copyfileobj(gz_in, f_out)
                 dna_file_to_use = extracted_path
 
-        self.logger.info(f"Loading DNA sequences from {dna_file_to_use}")
+        self.logger.info(f"Loading DNA sequences from {Path(dna_file_to_use).name}")
 
         dna_records = SeqIO.index(str(dna_file_to_use), "fasta")
         
@@ -267,7 +267,7 @@ class GenomeBuilder:
         if self._cdna_records:
             raise BuilderStateError("with_cdna_fasta() has already been called.")
         
-        self.logger.info(f"Loading cDNA sequences from {cdna_fasta_path}")
+        self.logger.info(f"Loading cDNA sequences from {Path(cdna_fasta_path).name}")
         
         open_func = gzip.open if str(cdna_fasta_path).endswith('.gz') else open
         with open_func(cdna_fasta_path, "rt") as handle:
@@ -299,7 +299,7 @@ class GenomeBuilder:
         if self._genes_map:
             raise BuilderStateError("with_gtf_file() has already been called.")
 
-        self.logger.info(f"Processing annotations from {gtf_path}")
+        self.logger.info(f"Processing annotations from {Path(gtf_path).name}")
         db, self._gtf_db_path = create_gtf_database(gtf_path, db_path)
 
         
@@ -382,6 +382,8 @@ class GenomeBuilder:
             if gene_id and gene_id in self._genes_map:
                 gene = self._genes_map[gene_id]
                 sequence = self._cdna_records.pop(transcript_id, SeqRecord(Seq(""))).seq
+                if not isinstance(sequence, Seq):
+                    sequence = Seq(sequence or "")
                 transcript = Transcript(id=transcript_id, chr=gene.chr, start=start, end=end, strand=strand,
                                         sequence=sequence, gene=gene, genome=self._genome, **attributes)
                 gene.add_transcript(transcript)
@@ -401,7 +403,7 @@ class GenomeBuilder:
             if self._chromosome_filter and seqid not in self._chromosome_filter:
                 continue
 
-            attributes = json.loads(attributes_json)
+            attributes: dict[str, Any] = json.loads(attributes_json)
 
             transcript_id = attributes.pop('transcript_id', [None])[0]
             exon_id = attributes.pop('exon_id', [e_id])[0]

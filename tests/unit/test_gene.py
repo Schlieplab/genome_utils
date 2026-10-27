@@ -12,7 +12,7 @@ from unittest.mock import Mock
 import pytest
 from Bio.Seq import Seq
 
-from GenomeUtils.Genome import Gene, Locus
+from GenomeUtils.Genome import Exon, Gene, Locus, Transcript
 
 
 class TestGene:
@@ -136,6 +136,32 @@ class TestGene:
         # Initially empty
         assert gene.transcripts == []
         assert gene.transcripts is gene._children
+
+    def test_gene_exons_property(self):
+        """Exons shared by transcripts appear once and updates are reflected."""
+        genome_mock = Mock()
+        gene = Gene("GENE", "TEST", "chr1", 100, 300, "+", genome=genome_mock)
+        assert gene.exons == []
+
+        first = Transcript("T1", "chr1", 100, 200, "+", Seq(""), gene=gene, genome=genome_mock)
+        second = Transcript("T2", "chr1", 100, 300, "+", Seq(""), gene=gene, genome=genome_mock)
+        gene.add_transcript(first)
+        gene.add_transcript(second)
+
+        shared = Exon("E1", "chr1", 110, 120, "+", gene=gene, genome=genome_mock)
+        first_only = Exon("E2", "chr1", 130, 140, "+", gene=gene, genome=genome_mock)
+        second_only = Exon("E3", "chr1", 150, 160, "+", gene=gene, genome=genome_mock)
+        first.add_exon(shared)
+        first.add_exon(first_only)
+        second.add_exon(shared)
+        second.add_exon(second_only)
+
+        assert gene.exons == [shared, first_only, second_only]
+        assert gene.exons[0] is shared
+
+        later = Exon("E4", "chr1", 170, 180, "+", gene=gene, genome=genome_mock)
+        second.add_exon(later)
+        assert gene.exons == [shared, first_only, second_only, later]
 
     def test_gene_add_transcript(self):
         """Test adding transcripts to gene."""
@@ -465,6 +491,5 @@ class TestGene:
         assert gene.chr == chromosome.chr
         assert gene.chr == "chr22"
         assert gene.locus.chr == "chr22"
-
 
 
